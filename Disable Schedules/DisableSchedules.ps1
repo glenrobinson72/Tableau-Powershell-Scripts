@@ -1,3 +1,15 @@
+#######################################################################################################
+#     
+#        PROGRAM: DisableSchedules.ps1
+#
+#    DESCRIPTION: Powershell script to disable Schedules on a Tableau server, using REST API
+#                 Requires Tableau 10.1 onwards.
+#
+#     WRITTEN BY:  Glen Robinson (Interworks UK)
+#
+#
+#######################################################################################################
+
 $servername = "Server"
 $user = "admin"
 $pword = "password"
