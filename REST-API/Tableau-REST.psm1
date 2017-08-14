@@ -1,8 +1,8 @@
-###############################################
+##############################################
 #    
 #   Module: Tableau-REST.psm1
 #   Description: Tableau REST API through Powershell
-#   Version: 1.3
+#   Version: 1.4
 #   Author: Glen Robinson (glen.robinson@interworks.co.uk)
 #
 #
@@ -614,7 +614,15 @@ function TS-AddUserToSite
 
 function TS-UpdateUser
 {
-  try
+ param(
+ [string[]] $UserAccount = "",
+ [string[]] $Fullname = "",
+ [string[]] $Password = "",
+ [string[]] $Email = "",
+ [validateset('Interactor', 'Publisher', 'SiteAdministrator', 'Unlicensed','UnlicensedWithPublish', 'Viewer','ViewerWithPublish')][string[]] $SiteRole = ""
+ )
+ 
+ try
    { 
     $UserID = TS-GetUserDetails -Name $UserAccount
 
@@ -2301,5 +2309,4 @@ Export-ModuleMember -Function TS-DownloadWorkbook
 Export-ModuleMember -Function TS-QueryWorkbookPreviewImage
 Export-ModuleMember -Function TS-QueryViewPreviewImage
 Export-ModuleMember -Function TS-QueryViewImage
-
 
