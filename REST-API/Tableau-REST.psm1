@@ -2,7 +2,7 @@
 #    
 #   Module: Tableau-REST.psm1
 #   Description: Tableau REST API through Powershell
-#   Version: 1.4
+#   Version: 1.5
 #   Author: Glen Robinson (glen.robinson@interworks.co.uk)
 #
 #
@@ -54,8 +54,8 @@ function TS-SignIn
   </credentials>
  </tsRequest>’)
 
-# try
-#  {
+ try
+  {
    $response = Invoke-RestMethod -Uri ${protocol}://$server/api/$api_ver/auth/signin -Body $signin_body -Method Post
    # get the auth token, site id and my user id
    $global:authToken = $response.tsResponse.credentials.token
@@ -64,12 +64,12 @@ function TS-SignIn
 
    # set up header fields with auth token
    $global:headers = New-Object “System.Collections.Generic.Dictionary[[String],[String]]”
-   # add X-Tableau-Auth header with our auth token
+   # add X-Tableau-Auth header with our auth tokents-
    $headers.Add(“X-Tableau-Auth”, $authToken)
    "Signed In Successfully to Server: "  + ${protocol}+"://"+$server
-#  }
+  }
 
-#  catch {"Unable to Sign-In to Tableau Server: " + ${protocol}+"://"+$server}
+ catch {"Unable to Sign-In to Tableau Server: " + ${protocol}+"://"+$server}
 }
 
 
@@ -842,6 +842,7 @@ $url = $protocol.trim() + "://" + $server +"/api/" + $api_ver+ "/sites/" + $site
 $wc = New-Object System.Net.WebClient
 $wc.Headers.Add('X-Tableau-Auth',$headers.Values[0])
 $wc.Headers.Add('ContentLength', $request_body.Length)
+
 $wc.Headers.Add('Content-Type', 'multipart/mixed; boundary=6691a87289ac461bab2c945741f136e6')
 $response = $wc.UploadString($url ,'POST', $request_body)
 "Workbook published successfully."
@@ -1561,7 +1562,7 @@ try
    }
    
    $DataSourceCapabilities = ""
-   If ($ViewDataSource -eq 'Allow' -or $ViewDataSource -eq 'Deny'){$DataSourceCapabilities += '        <capability name="Read" mode="' + $ViewWorkbook +'" />'}
+   If ($ViewDataSource -eq 'Allow' -or $ViewDataSource -eq 'Deny'){$DataSourceCapabilities += '        <capability name="Read" mode="' + $ViewDataSource +'" />'}
    If ($Connect  -eq 'Allow' -or $Connect  -eq 'Deny'){$DataSourceCapabilities += '        <capability name="Connect" mode="' + $Connect  +'" />'}
    If ($SaveDataSource  -eq 'Allow' -or $SaveDataSource -eq 'Deny'){$DataSourceCapabilities += '        <capability name="Write" mode="' + $SaveDataSource +'" />'}
    If ($DownloadDataSource  -eq 'Allow' -or $DownloadDataSource -eq 'Deny'){$DataSourceCapabilities += '        <capability name="ExportXML" mode="' + $DownloadDataSource +'" />'}
@@ -2309,4 +2310,3 @@ Export-ModuleMember -Function TS-DownloadWorkbook
 Export-ModuleMember -Function TS-QueryWorkbookPreviewImage
 Export-ModuleMember -Function TS-QueryViewPreviewImage
 Export-ModuleMember -Function TS-QueryViewImage
-
