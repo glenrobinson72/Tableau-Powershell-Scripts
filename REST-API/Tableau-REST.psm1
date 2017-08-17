@@ -2316,13 +2316,13 @@ function TS-RemoveDataSourceRevision
  [string[]] $ProjectName = "",
  [string[]] $RevisionNumber =""
  )
- try
- {
-  $DataSourceID = TS-GetWorkbookDetails -Name $DataSourceName -ProjectName $ProjectName
+# try
+ #{
+  $DataSourceID = TS-GetDataSourceDetails -Name $DataSourceName -ProjectName $ProjectName
   $response = Invoke-RestMethod -Uri ${protocol}://$server/api/$api_ver/sites/$siteID/datasources/$datasourceID/revisions/$RevisionNumber -Headers $headers -Method Delete
   "Removed Datasource Revision: " + $RevisionNumber
-  }
-  catch {"Unable to remove Datasource Revision: " + $RevisionNumber  }
+ # }
+  #catch {"Unable to remove Datasource Revision: " + $RevisionNumber  }
  }
 
 
