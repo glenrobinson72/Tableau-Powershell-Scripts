@@ -2,7 +2,7 @@
 #    
 #   Module: Tableau-REST.psm1
 #   Description: Tableau REST API through Powershell
-#   Version: 1.5
+#   Version: 1.6
 #   Author: Glen Robinson (glen.robinson@interworks.co.uk)
 #
 #
@@ -2195,8 +2195,8 @@ Function TS-QueryViewImage
  [string[]] $FileName = "None",
  [validateset('Normal', 'High')][string[]] $ImageQuality = "Normal"
  )
- #try
- # {
+ try
+  {
    $suffix = ""
    $viewID = TS-GetViewDetails -WorkbookName $WorkbookName -ProjectName $ProjectName -ViewName $ViewName
    If ($ImageQuality = "High")
@@ -2215,14 +2215,116 @@ Function TS-QueryViewImage
       $wc.DownloadFile($url, $FileName)
       "File Downloaded: " + $FileName
      }
- 
-
-
- # }
- # catch {"Unable to Query View Image."
- # $Error[0]
- # }
+  }
+  catch {"Unable to Query View Image."
+  }
 }
+
+
+
+function TS-GetDataSourceRevisions
+{
+ param(
+ [string[]] $DataSourceName = "",
+ [string[]] $ProjectName = "" 
+ )
+ try
+ {
+  $DataSourceID = TS-GetDataSourceDetails -Name $DataSourceName -ProjectName $ProjectName
+  
+  $PageSize = 100
+  $PageNumber = 1
+  $done = 'FALSE'
+
+  While ($done -eq 'FALSE')
+   {
+    $response = Invoke-RestMethod -Uri ${protocol}://$server/api/$api_ver/sites/$siteID/datasources/$DataSourceID/revisions?pageSize=$PageSize`&pageNumber=$PageNumber -Headers $headers -Method Get
+
+    $totalAvailable = $response.tsResponse.pagination.totalAvailable
+
+    If ($PageSize*$PageNumber -gt $totalAvailable) { $done = 'TRUE'}
+
+    $PageNumber += 1
+
+
+    ForEach ($detail in $response.tsResponse.revisions.revision)
+    {
+     $Revisions = [pscustomobject]@{DataSourceName=$DataSourceName; Project=$ProjectName; RevisionNumber=$detail.revisionnumber; PublishedAt=$detail.publishedAt; IsDeleted=$detail.deleted; IsCurrent=$detail.current;Size=$detail.SizeinBytes; Publisher=$detail.publisher.name}
+     $Revisions
+    }
+   }
+  }
+  catch {"Unable to Get Datasource Revisions"}
+ }
+
+function TS-GetWorkbookRevisions
+{
+ param(
+ [string[]] $WorkbookName = "",
+ [string[]] $ProjectName = "" 
+ )
+ try
+ {
+  $WorkbookID = TS-GetWorkbookDetails -Name $WorkbookName -ProjectName $ProjectName
+  
+  $PageSize = 100
+  $PageNumber = 1
+  $done = 'FALSE'
+
+  While ($done -eq 'FALSE')
+   {
+    $response = Invoke-RestMethod -Uri ${protocol}://$server/api/$api_ver/sites/$siteID/workbooks/$workbookID/revisions?pageSize=$PageSize`&pageNumber=$PageNumber -Headers $headers -Method Get
+
+    $totalAvailable = $response.tsResponse.pagination.totalAvailable
+
+    If ($PageSize*$PageNumber -gt $totalAvailable) { $done = 'TRUE'}
+
+    $PageNumber += 1
+
+
+    ForEach ($detail in $response.tsResponse.revisions.revision)
+    {
+     $Revisions = [pscustomobject]@{WorkbookName=$WorkbookName; Project=$ProjectName; RevisionNumber=$detail.revisionnumber; PublishedAt=$detail.publishedAt; IsDeleted=$detail.deleted; IsCurrent=$detail.current;Size=$detail.SizeinBytes; Publisher=$detail.publisher.name}
+     $Revisions
+    }
+   }
+  }
+  catch {"Unable to Get Workbook Revisions"}
+ }
+
+function TS-RemoveWorkbookRevision
+{
+ param(
+ [string[]] $WorkbookName = "",
+ [string[]] $ProjectName = "",
+ [string[]] $RevisionNumber =""
+ )
+ try
+ {
+  $WorkbookID = TS-GetWorkbookDetails -Name $WorkbookName -ProjectName $ProjectName
+  $response = Invoke-RestMethod -Uri ${protocol}://$server/api/$api_ver/sites/$siteID/workbooks/$workbookID/revisions/$RevisionNumber -Headers $headers -Method Delete
+  "Removed Workbook Revision: " + $RevisionNumber
+  }
+  catch {"Unable to remove Workbook Revision: " + $RevisionNumber  }
+ }
+
+
+function TS-RemoveDataSourceRevision
+{
+ param(
+ [string[]] $DataSourceName = "",
+ [string[]] $ProjectName = "",
+ [string[]] $RevisionNumber =""
+ )
+ try
+ {
+  $DataSourceID = TS-GetWorkbookDetails -Name $DataSourceName -ProjectName $ProjectName
+  $response = Invoke-RestMethod -Uri ${protocol}://$server/api/$api_ver/sites/$siteID/datasources/$datasourceID/revisions/$RevisionNumber -Headers $headers -Method Delete
+  "Removed Datasource Revision: " + $RevisionNumber
+  }
+  catch {"Unable to remove Datasource Revision: " + $RevisionNumber  }
+ }
+
 
 
 ## Sign in / Out
@@ -2310,3 +2412,10 @@ Export-ModuleMember -Function TS-DownloadWorkbook
 Export-ModuleMember -Function TS-QueryWorkbookPreviewImage
 Export-ModuleMember -Function TS-QueryViewPreviewImage
 Export-ModuleMember -Function TS-QueryViewImage
+
+
+# Workbook and DataSource Revisions 
+Export-ModuleMember -Function TS-GetDataSourceRevisions
+Export-ModuleMember -Function TS-GetWorkbookRevisions
+Export-ModuleMember -Function TS-RemoveWorkbookRevision
+Export-ModuleMember -Function TS-RemoveDataSourceRevision
