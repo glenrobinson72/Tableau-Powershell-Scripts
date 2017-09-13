@@ -2,7 +2,7 @@
 #    
 #   Module: Tableau-REST.psm1
 #   Description: Tableau REST API through Powershell
-#   Version: 1.6
+#   Version: 1.7
 #   Author: Glen Robinson (glen.robinson@interworks.co.uk)
 #
 #
@@ -432,7 +432,7 @@ function TS-UpdateGroup
   catch {"Unable to Update Group: "+$GroupName}
 }
 
-
+    
 function TS-GetGroupDetails
 {
  param(
@@ -601,6 +601,7 @@ function TS-AddUserToSite
   param(
  [string[]] $UserAccount = "",
  [validateset('Interactor', 'Publisher', 'SiteAdministrator', 'Unlicensed','UnlicensedWithPublish', 'Viewer','ViewerWithPublish')][string[]] $SiteRole = "Unlicensed"
+ 
  )
 
  try
@@ -690,15 +691,15 @@ function TS-QueryDataSourceConnections
  [string[]] $DataSourceName = "",
  [string[]] $ProjectName = ""
  )
-# try
-# {
+ try
+ {
    $DS_ID = TS-GetDataSourceDetails -Name $DataSourceName -ProjectName $ProjectName
    $DS_ID
    $response = Invoke-RestMethod -Uri ${protocol}://$server/api/$api_ver/sites/$siteID/datasources/$DS_ID/connections -Headers $headers -Method GET 
-   $response.tsresponse.connections
-# }
- #catch { "Unable to Query Data Source Connections: " + $DataSourceName}
- 
+  $response.tsResponse.Connections.connection
+ }
+catch { "Unable to Query Data Source Connections: " + $DataSourceName}
+    
 }
 
 function TS-GetDataSourceDetails
@@ -725,7 +726,7 @@ While ($done -eq 'FALSE')
   foreach ($detail in $response.tsResponse.DataSources.DataSource)
    { 
     if ($Name -eq $detail.name -and $ProjectName -eq $detail.project.name){Return $detail.ID}
-    if ($ID -eq $detail.ID  -and $ProjectName -eq $detail.project.name){Return $detail.Name}
+    if ($ID -eq $detail.ID){Return $detail.Name}
    }
  }
 }
@@ -974,7 +975,7 @@ param(
 
 
    }
-  catch{  "Unable to query Project Permissions: " + $ProjectName  }
+  catch{"Unable to query Project Permissions: " + $ProjectName  }
 }
 
 
@@ -1012,7 +1013,7 @@ param(
         }
       }
    }
-  catch{  "Unable to query Workbook Permissions: " + $WorkbookName  }
+  catch{"Unable to query Workbook Permissions: " + $WorkbookName  }
 }
 
 
@@ -1051,7 +1052,7 @@ param(
         }
       }
    }
-  catch{  "Unable to query DataSources Permissions: " + $DataSourceName }
+  catch{"Unable to query DataSources Permissions: " + $DataSourceName }
 }
 
 
@@ -1592,6 +1593,8 @@ try
  catch {"Unable to update DataSource Permissions."}
 }
 
+
+
 ###### Jobs, Tasks, and Schedules
 
 
@@ -1622,19 +1625,91 @@ function TS-QuerySchedules
 function TS-UpdateSchedule
 {
 param(
- [string[]] $ScheduleName = ""
+ [string[]] $ScheduleName = "",
+ [string[]] $newScheduleName ="",
+ [string[]] $newPriority ="",
+ [validateset('Active','Suspended')][string[]] $newState = "",
+ [validateset('Parallel', 'Serial')][string[]] $newExecutionOrder = "",
+ [validateset('Hourly', 'Daily', 'Weekly', 'Monthly')][string[]] $newFrequency ="",
+ [string[]] $newStartTime ="00:00",
+ [string[]] $newEndTime ="00:00",
+ [string[]] $newInterval = ""
  )
 
- try
+try
  {
   $ID = TS-GetScheduleDetails -name $ScheduleName
   $ID
 
+
+  $updated_schedule = ""
+  $updated_frequency = ""
+  $updated_intervals = ""
+
+  if ($NewScheduleName -ne '') {$updated_schedule += ' name="'+ $newScheduleName+'"'}
+  if ($newPriority -ne '') {$updated_schedule += ' priority="'+ $newPriority+'"'}
+  if ($newExecutionOrder -ne '') {$updated_schedule += ' executionOrder="'+ $newExecutionOrder+'"'}
+  if ($newState -ne '') {$updated_schedule += ' state="'+ $newState+'"'}
+  if ($newFrequency -ne '') 
+    {
+     
+     if ($newFrequency -eq 'Hourly')
+      {     
+        If ($newInterval -eq '15' -or $newInterval -eq '30')
+         {
+           $interval_text = '<interval minutes="'+$newInterval +'" />'
+         }
+        else
+         {
+           $interval_text = '<interval hours="'+$newInterval +'" />'
+         }
+        $updated_schedule += ' frequency="'+ $newFrequency+'"'
+        $updated_frequency = '<frequencyDetails start="'+ $newStartTime+':00" end="' +$newEndTime +':00">
+         <intervals>
+         ' + $interval_text + '
+          </intervals>
+      </frequencyDetails>'
+      }
+      elseif
+       ($newFrequency -eq 'Daily')
+      {     
+        $updated_schedule += ' frequency="'+ $newFrequency+'"'
+        $updated_frequency = '<frequencyDetails start="'+ $newStartTime+':00">
+         <intervals>
+          <interval hours="1" />
+        </intervals>
+      </frequencyDetails>'
+      }
+      elseif
+       ($newFrequency -eq 'Weekly')
+      {     
+        $IntervalsArrary = $newInterval.Split(",")
+        Foreach ($Interval in $IntervalsArrary) {$interval_text += '<interval weekDay ="'+ $Interval +'" />'}
+
+
+        $updated_schedule += ' frequency="'+ $newFrequency+'"'
+        $updated_frequency = '<frequencyDetails start="'+ $newStartTime+':00">
+         <intervals>
+          ' + $interval_text + '
+        </intervals>
+      </frequencyDetails>'
+      }
+      elseif
+       ($newFrequency -eq 'Monthly')
+      {     
+        $updated_schedule += ' frequency="'+ $newFrequency+'"'
+        $updated_frequency = '<frequencyDetails start="'+ $newStartTime+':00">
+         <intervals>
+          <interval monthDay="'+$newInterval +'" />
+        </intervals>
+      </frequencyDetails>'
+      }
+    }
+
    $Schedule_request = "
         <tsRequest>
-          <schedule
-          state='Suspended'>
-          
+          <schedule 
+          " + $updated_schedule +">" + $updated_frequency + $updated_intervals + "
           </schedule>
         </tsRequest>
         "
@@ -1643,17 +1718,123 @@ param(
    $response.tsresponse.schedule
    
  }
- catch{"Unable to Query Schedules"}
+ catch{"Unable to Update Schedule."}
+}
 
+function TS-DeleteSchedule
+{
+param(
+ [string[]] $ScheduleName = ""
+ )
 
-
-
-
+try
+ {
+  $ID = TS-GetScheduleDetails -name $ScheduleName
+  $ID
+   $response = Invoke-RestMethod -Uri ${protocol}://$server/api/$api_ver/schedules/$ID -Headers $headers -Method DELETE
+ }
+ catch{"Unable to Delete Schedule."}
 }
 
 
 
 
+function TS-CreateSchedule
+{
+param(
+ [string[]] $ScheduleName = "",
+ [string[]] $Priority ="",
+ [validateset('Extract','Subscription')][string[]] $Type = "",
+ [validateset('Active','Suspended')][string[]] $State = "",
+ [validateset('Parallel', 'Serial')][string[]] $ExecutionOrder = "Parallel",
+ [validateset('Hourly', 'Daily', 'Weekly', 'Monthly')][string[]] $Frequency ="",
+ [string[]] $StartTime ="00:00",
+ [string[]] $EndTime ="00:00",
+ [string[]] $Interval = ""
+ )
+
+try
+ {
+  $updated_schedule = ""
+  $updated_frequency = ""
+  $updated_intervals = ""
+
+  if ($ScheduleName -ne '') {$updated_schedule += ' name="'+ $ScheduleName+'"'}
+  if ($Priority -ne '') {$updated_schedule += ' priority="'+ $Priority+'"'}
+  if ($ExecutionOrder -ne '') {$updated_schedule += ' executionOrder="'+ $ExecutionOrder+'"'}
+  if ($State -ne '') {$updated_schedule += ' state="'+ $State+'"'}
+  if ($Type -ne '') {$updated_schedule += ' type="'+ $Type+'"'}
+
+  if ($Frequency -ne '') 
+    {
+     
+     if ($Frequency -eq 'Hourly')
+      {     
+        If ($Interval -eq '15' -or $Interval -eq '30')
+         {
+           $interval_text = '<interval minutes="'+$Interval +'" />'
+         }
+        else
+         {
+           $interval_text = '<interval hours="'+$Interval +'" />'
+         }
+        $updated_schedule += ' frequency="'+ $Frequency+'"'
+        $updated_frequency = '<frequencyDetails start="'+ $StartTime+':00" end="' +$EndTime +':00">
+         <intervals>
+         ' + $interval_text + '
+          </intervals>
+      </frequencyDetails>'
+      }
+      elseif
+       ($Frequency -eq 'Daily')
+      {     
+        $updated_schedule += ' frequency="'+ $Frequency+'"'
+        $updated_frequency = '<frequencyDetails start="'+ $StartTime+':00">
+         <intervals>
+          <interval hours="1" />
+        </intervals>
+      </frequencyDetails>'
+      }
+      elseif
+       ($Frequency -eq 'Weekly')
+      {     
+        $IntervalsArrary = $Interval.Split(",")
+        Foreach ($Interval in $IntervalsArrary) {$interval_text += '<interval weekDay ="'+ $Interval +'" />'}
+
+
+        $updated_schedule += ' frequency="'+ $Frequency+'"'
+        $updated_frequency = '<frequencyDetails start="'+ $StartTime+':00">
+         <intervals>
+          ' + $interval_text + '
+        </intervals>
+      </frequencyDetails>'
+      }
+      elseif
+       ($Frequency -eq 'Monthly')
+      {     
+        $updated_schedule += ' frequency="'+ $Frequency+'"'
+        $updated_frequency = '<frequencyDetails start="'+ $StartTime+':00">
+         <intervals>
+          <interval monthDay="'+$Interval +'" />
+        </intervals>
+      </frequencyDetails>'
+      }
+    }
+
+   $Schedule_request = "
+        <tsRequest>
+          <schedule 
+          " + $updated_schedule +">" + $updated_frequency + $updated_intervals + "
+          </schedule>
+        </tsRequest>
+        "
+
+   $response = Invoke-RestMethod -Uri ${protocol}://$server/api/$api_ver/schedules -Headers $headers -Method POST -Body $Schedule_request
+   $response.tsresponse.schedule
+   
+ }
+ catch{"Unable to Create Schedule."}
+}
 
 
 function TS-QueryExtractRefreshTasks
@@ -1683,11 +1864,8 @@ function TS-QueryExtractRefreshTasks
      { 
        $datasource_name = TS-GetDataSourceDetails -ID $detail.datasource.id
        $workbook_name = TS-GetWorkbookDetails -ID $detail.workbook.id
-
-
-
-      $Task = [pscustomobject]@{Priority=$detail.priority; Type=$detail.Type; Workbook=$workbook_name; Datasource=$datasource_name; ID=$detail.ID}
-      $Task
+       $Task = [pscustomobject]@{Priority=$detail.priority; Type=$detail.Type; Workbook=$workbook_name; Datasource=$datasource_name; ID=$detail.ID}
+       $Task
      }
    }
  }
@@ -1725,18 +1903,71 @@ While ($done -eq 'FALSE')
  
 }
 
+
+function TS-GetExtractRefreshTasks
+{
+     $response = Invoke-RestMethod -Uri ${protocol}://$server/api/$api_ver/sites/$siteID/tasks/extractRefreshes -Headers $headers -Method Get
+     $response.tsResponse.tasks.task.extractRefresh
+}
+
+
+function TS-RunExtractRefreshTask
+{
+ param(
+[string[]] $ScheduleName ="",
+[string[]] $WorkbookName ="",
+[string[]] $DataSourceName ="",
+[string[]] $ProjectName =""
+  )
+     $TaskID = TS-GetExtractRefreshTaskID -ScheduleName $ScheduleName -WorkbookName $WorkbookName -DataSourceName $DataSourceName -ProjectName $ProjectName
+     $TaskID   
+     $body = "<tsRequest></tsRequest>"
+     $response = Invoke-RestMethod -Uri ${protocol}://$server/api/$api_ver/sites/$siteID/tasks/extractRefreshes/$TaskID/runNow -Headers $headers -Method POST -Body $body -ContentType "text/xml"
+     $response.tsresponse.job
+}
+
+
+function TS-GetExtractRefreshTaskID
+{
+param(
+[string[]] $ScheduleName ="",
+[string[]] $WorkbookName ="",
+[string[]] $DataSourceName ="",
+[string[]] $ProjectName =""
+
+)
+  if ($DataSourceName -ne '') {$DataSourceID = TS-GetDataSourceDetails -Name $DataSourceName -ProjectName $ProjectName}
+  if ($WorkbookName -ne ''){$workbookID = TS-GetWorkbookDetails -Name $WorkBookName -ProjectName $ProjectName}
+
+  $Tasks = TS-GetExtractRefreshTasks
+
+  ForEach ($Task in $Tasks)
+    {
+      If ($ScheduleName -eq $Task.Schedule.name -and ($DataSourceID -eq $Task.datasource.id -or $workbookID -eq $task.Workbook.id))
+       {
+         return $Task.id
+       }
+    }
+}
+
+
 function TS-DownloadWorkbook
 {
 param
  (
  [string[]] $WorkBookName ="",
  [string[]] $ProjectName ="",
- [string[]] $FileName =""
+ [string[]] $FileName ="",
+ [validateset('True', 'False')][string[]] $IncludeExtract =""
+
  )
  try
   {
    $workbookID = TS-GetWorkbookDetails -Name $WorkBookName -ProjectName $ProjectName
-   $url = $protocol.trim() + "://" + $server +"/api/" + $api_ver+ "/sites/" + $siteID + "/workbooks/" + $WorkbookID + "/content"
+   $suffix = ""
+   if ($IncludeExtract -ne ''){$suffix = '?includeExtract='+$IncludeExtract}
+
+   $url = $protocol.trim() + "://" + $server +"/api/" + $api_ver+ "/sites/" + $siteID + "/workbooks/" + $WorkbookID + "/content" + $suffix
 
    $wc = New-Object System.Net.WebClient
    $wc.Headers.Add('X-Tableau-Auth',$headers.Values[0])
@@ -1747,19 +1978,50 @@ param
  catch{"Unable to download workbook. " + $WorkBookName}
 }
 
+function TS-DownloadWorkbookRevision
+{
+param
+ (
+ [string[]] $WorkBookName ="",
+ [string[]] $ProjectName ="",
+ [string[]] $FileName ="",
+ [string[]] $RevisionNumber,
+ [validateset('True', 'False')][string[]] $IncludeExtract =""
+
+ )
+ try
+ {
+   $workbookID = TS-GetWorkbookDetails -Name $WorkBookName -ProjectName $ProjectName
+   $suffix = ""
+   if ($IncludeExtract -ne ''){$suffix = '?includeExtract='+$IncludeExtract}
+
+   $url = $protocol.trim() + "://" + $server +"/api/" + $api_ver+ "/sites/" + $siteID + "/workbooks/" + $WorkbookID + "/revisions/" + $RevisionNumber + "/content" + $suffix
+   $wc = New-Object System.Net.WebClient
+   $wc.Headers.Add('X-Tableau-Auth',$headers.Values[0])
+   $wc.DownloadFile($url, $FileName)
+   "Workbook " + $WorkbookName + " download successfully to " + $FileName
+
+ }
+ catch{"Unable to download workbook revision. " + $WorkBookName}
+}
+
+
+
 function TS-DownloadDataSource
 {
 param
  (
  [string[]] $DatasourceName ="",
  [string[]] $ProjectName ="",
- [string[]] $FileName =""
+ [string[]] $FileName ="",
+ [validateset('True', 'False')][string[]] $IncludeExtract =""
  )
  try
   {
    $DataSourceID = TS-GetDataSourceDetails -Name $DataSourceName -ProjectName $ProjectName
-
-   $url = $protocol.trim() + "://" + $server +"/api/" + $api_ver+ "/sites/" + $siteID + "/DataSources/" + $DataSourceID + "/content"
+   $suffix = ""
+   if ($IncludeExtract -ne ''){$suffix = '?includeExtract='+$IncludeExtract}
+   $url = $protocol.trim() + "://" + $server +"/api/" + $api_ver+ "/sites/" + $siteID + "/DataSources/" + $DataSourceID + "/content"+ $suffix
 
    $wc = New-Object System.Net.WebClient
    $wc.Headers.Add('X-Tableau-Auth',$headers.Values[0])
@@ -1767,8 +2029,36 @@ param
    "Data Source " + $DatasourceName + " download successfully to " + $FileName
   }
  catch{"Unable to download datasource. " + $DatasourceName }
-
 }
+
+function TS-DownloadDataSourceRevision
+{
+param
+ (
+ [string[]] $DatasourceName ="",
+ [string[]] $ProjectName ="",
+ [string[]] $FileName ="",
+ [string[]] $RevisionNumber,
+ [validateset('True', 'False')][string[]] $IncludeExtract =""
+ )
+ try
+  {
+   $DataSourceID = TS-GetDataSourceDetails -Name $DataSourceName -ProjectName $ProjectName
+   $suffix = ""
+   if ($IncludeExtract -ne ''){$suffix = '?includeExtract='+$IncludeExtract}
+   $url = $protocol.trim() + "://" + $server +"/api/" + $api_ver+ "/sites/" + $siteID + "/DataSources/" + $DataSourceID + "/revisions/" + $RevisionNumber + "/content"+ $suffix
+
+   $wc = New-Object System.Net.WebClient
+   $wc.Headers.Add('X-Tableau-Auth',$headers.Values[0])
+   $wc.DownloadFile($url, $FileName)
+   "Data Source " + $DatasourceName + " download successfully to " + $FileName
+  }
+ catch{"Unable to download datasource revision. " + $DatasourceName }
+}
+
+
+
+
 
 function TS-QueryViewsForSite
 {
@@ -1862,6 +2152,42 @@ function TS-QueryWorkbooksForUser
  catch {"Unable to Query Workbooks for User"}
 }
 
+
+function TS-QueryWorkbooksForSite
+{
+  try
+ {
+  $PageSize = 100
+  $PageNumber = 1
+  $done = 'FALSE'
+
+
+
+  While ($done -eq 'FALSE')
+   { 
+    $response = Invoke-RestMethod -Uri ${protocol}://$server/api/$api_ver/sites/$siteID/workbooks?pageSize=$PageSize`&pageNumber=$PageNumber -Headers $headers -Method Get
+    $totalAvailable = $response.tsResponse.pagination.totalAvailable
+
+    If ($PageSize*$PageNumber -gt $totalAvailable) { $done = 'TRUE'}
+
+    $PageNumber += 1
+
+    ForEach ($detail in $response.tsResponse.workbooks.workbook)
+     {
+      $taglist =''
+      $ProjectName = TS-GetProjectDetails -ProjectID $detail.Project.ID
+      $Owner = TS-GetUserDetails -ID $detail.Owner.ID
+
+      ForEach ($tag in $detail.tags.tag.label){$taglist += $tag + " "}
+
+      $Workbooks = [pscustomobject]@{WorkbookName=$detail.name; ShowTabs=$detail.ShowTabs; ContentURL=$detail.contentURL; Size=$detail.size; CreatedAt=$detail.CreatedAt; UpdatedAt=$detail.UpdatedAt; Project=$ProjectName; Owner=$Owner; Tags=$taglist}
+      $workbooks
+     }
+   }
+ }
+ catch {"Unable to Query Workbooks for Site"}
+}
+
 function TS-GetWorkbookDetails
 {
 
@@ -1930,9 +2256,19 @@ param(
 [string[]] $ProjectName
 )
 
+try
+ {
  $workbookID = TS-GetWorkbookDetails -Name $WorkBookName -ProjectName $ProjectName
+ $WorkbookID
  $response = Invoke-RestMethod -Uri ${protocol}://$server/api/$api_ver/sites/$siteID/workbooks/$workbookID/connections -Headers $headers -Method Get
- $response.tsResponse.Connections.connection
+
+  ForEach ($detail in $response.tsResponse.Connections.connection)
+   {
+    $Connections = [pscustomobject]@{Id=$detail.id; Type=$detail.type; ServerAddress=$detail.serverAddress; ServerPort=$detail.serverPort;UserName=$detail.userName;DataSourceID=$detail.datasource.Id;DataSourceName=$detail.datasource.name}
+    $Connections`
+   }
+ }
+ catch {"Unable to Query Workbook connections."}
 }
 
 
@@ -2163,7 +2499,7 @@ Function TS-QueryWorkbookPreviewImage
 
 Function TS-QueryViewPreviewImage
 {
- param(
+param(
  [string[]] $ViewName = "",
  [string[]] $WorkbookName = "",
  [string[]] $ProjectName = "",
@@ -2327,6 +2663,8 @@ function TS-RemoveDataSourceRevision
 
 
 
+
+    
 ## Sign in / Out
 Export-ModuleMember -Function TS-SignIn
 Export-ModuleMember -Function TS-SignOut
@@ -2365,10 +2703,15 @@ Export-ModuleMember -Function TS-UpdateUser
 Export-ModuleMember -Function TS-QuerySchedules
 Export-ModuleMember -Function TS-QueryExtractRefreshTasks
 Export-ModuleMember -Function TS-UpdateSchedule
+Export-ModuleMember -Function TS-CreateSchedule
+Export-ModuleMember -Function TS-DeleteSchedule
+Export-ModuleMember -Function TS-GetExtractRefreshTasks
+Export-ModuleMember -Function TS-RunExtractRefreshTask
 
 ## Workbook and Views Management
 Export-ModuleMember -Function TS-QueryViewsForSite
 Export-ModuleMember -Function TS-QueryWorkbooksForUser
+Export-ModuleMember -Function TS-QueryWorkbooksForSite
 Export-ModuleMember -Function TS-QueryViewsForWorkbook
 Export-ModuleMember -Function TS-QueryWorkbook
 Export-ModuleMember -Function TS-UpdateWorkbook
@@ -2419,3 +2762,5 @@ Export-ModuleMember -Function TS-GetDataSourceRevisions
 Export-ModuleMember -Function TS-GetWorkbookRevisions
 Export-ModuleMember -Function TS-RemoveWorkbookRevision
 Export-ModuleMember -Function TS-RemoveDataSourceRevision
+Export-ModuleMember -Function TS-DownloadDataSourceRevision
+Export-ModuleMember -Function TS-DownloadWorkbookRevision
