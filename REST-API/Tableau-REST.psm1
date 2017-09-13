@@ -2,7 +2,7 @@
 #    
 #   Module: Tableau-REST.psm1
 #   Description: Tableau REST API through Powershell
-#   Version: 1.7
+#   Version: 1.8
 #   Author: Glen Robinson (glen.robinson@interworks.co.uk)
 #
 #
@@ -92,7 +92,7 @@ function TS-QueryProjects
 {
  try
  {
- $api_ver
+ 
    $PageSize = 100
    $PageNumber = 1
    $done = 'FALSE'
@@ -551,14 +551,15 @@ function TS-GetUsersInGroup
 {
 
 param(
-  [string[]] $GroupName
+  [string[]] $GroupName,
+  [string[]] $Domain ="Local"
   )
   try
   {
    $PageSize = 100
    $PageNumber = 1
    $done = 'FALSE'
-   $GroupID = TS-GetGroupDetails -name $GroupName
+   $GroupID = TS-GetGroupDetails -name $GroupName -Domain $Domain
 
    While ($done -eq 'FALSE')
     {
@@ -1062,6 +1063,8 @@ param(
   [string[]] $ProjectName = "",
   [string[]] $GroupName = "",
   [string[]] $UserAccount = "",
+  [string[]] $Domain ="local",
+
   #Project Permissions
   [validateset('Allow', 'Deny', 'Blank')][string[]] $ViewProject = "",
   [validateset('Allow', 'Deny', 'Blank')][string[]] $SaveProject = "",
@@ -1101,7 +1104,7 @@ try
   $ProjectID= TS-GetProjectDetails -projectname $ProjectName
   if ($GroupName -ne '')
    {
-    $GroupID = TS-GetGroupDetails -name $GroupName
+    $GroupID = TS-GetGroupDetails -name $GroupName -Domain $Domain
     $affectedObject = '      <group id="' + $GroupID +'" />'
    }
 
@@ -1344,6 +1347,7 @@ param(
   [string[]] $ProjectName = "",
   [string[]] $workbookName = "",
   [string[]] $GroupName = "",
+  [string[]] $Domain = "local",
   [string[]] $UserAccount = "",
 
   #Workbook Permissions
@@ -1373,7 +1377,7 @@ try
   $WorkbookID= TS-GetWorkbookDetails -Name $workbookName -projectname $ProjectName
   if ($GroupName -ne '')
    {
-    $GroupID = TS-GetGroupDetails -name $GroupName
+    $GroupID = TS-GetGroupDetails -name $GroupName -Domain $Domain
     $affectedObject = '      <group id="' + $GroupID +'" />'
    }
 
@@ -1481,6 +1485,7 @@ param(
   [string[]] $ProjectName = "",
   [string[]] $DataSourceName = "",
   [string[]] $GroupName = "",
+  [string[]] $Domain ="local",
   [string[]] $UserAccount = "",
 
 
@@ -1503,7 +1508,7 @@ try
   $DataSourceID= TS-GetDataSourceDetails -Name $DataSourcekName -projectname $ProjectName
   if ($GroupName -ne '')
    {
-    $GroupID = TS-GetGroupDetails -name $GroupName
+    $GroupID = TS-GetGroupDetails -name $GroupName -Domain $Domain
     $affectedObject = '      <group id="' + $GroupID +'" />'
    }
 
