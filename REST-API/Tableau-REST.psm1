@@ -2,7 +2,8 @@
 #    
 #   Module: Tableau-REST.psm1
 #   Description: Tableau REST API through Powershell
-#   Version: 1.8
+#   Version: 1.9
+
 #   Author: Glen Robinson (glen.robinson@interworks.co.uk)
 #
 #
@@ -336,11 +337,10 @@ function TS-CreateGroup
  [validateset('Interactor', 'Publisher', 'SiteAdministrator', 'Unlicensed','UnlicensedWithPublish', 'Viewer','ViewerWithPublish')][string[]] $SiteRole = "Unlicensed",
  [validateset('True', 'False')][string[]] $BackgroundTask = "True"
  )
- #try
- #{
+ try
+ {
    if (-not($DomainName)) 
     { # Local Group Creation
-    "AA"
       $body = ('<tsRequest><group name="' + $GroupName +  '" /></tsRequest>')
       $response = Invoke-RestMethod -Uri ${protocol}://$server/api/$api_ver/sites/$siteID/groups -Headers $headers -Method POST -Body $body
       $response.tsResponse.group
@@ -349,13 +349,11 @@ function TS-CreateGroup
     {  # Active Directory Group Creation
 
       $body = ('<tsRequest><group name="' + $GroupName + '" ><import source="ActiveDirectory" domainName="' +$DomainName + '" siteRole="' + $SiteRole +'" /></group></tsRequest>')
-            $body
-
       $response = Invoke-RestMethod -Uri ${protocol}://$server/api/$api_ver/sites/$siteID/groups -Headers $headers -Method POST -Body $body
       $response.tsResponse.group
     }
- # }
- #catch {"Unable to Create Group: " + $GroupName}
+  }
+ catch {"Unable to Create Group: " + $GroupName}
 }
 
 
@@ -407,7 +405,10 @@ function TS-QueryGroups
 function TS-UpdateGroup
 {
  param(
-
+  [string[]] $GroupName,
+  [string[]] $DomainName ="local",
+  [string[]] $NewGroupName,
+  [validateset('Interactor', 'Publisher', 'SiteAdministrator', 'Unlicensed','UnlicensedWithPublish', 'Viewer','ViewerWithPublish')][string[]] $NewSiteRole = "Unlicensed"
   )
   try
   {
@@ -415,7 +416,7 @@ function TS-UpdateGroup
    $GroupID = TS-GetGroupDetails -name $GroupName -Domain $DomainName
    $GRoupID
 
-   if ($DomainName -eq "Local") 
+   if ($DomainName -eq "local") 
     { # Local Group Update
      $body = ('<tsRequest><group name="' + $NewGroupName +  '" /></tsRequest>')
      $response = Invoke-RestMethod -Uri ${protocol}://$server/api/$api_ver/sites/$siteID/groups/$GroupID -Headers $headers -Method PUT -Body $body
@@ -424,7 +425,7 @@ function TS-UpdateGroup
    else
     {  # Active Directory Group Update
 
-      $body = ('<tsRequest><group name="' + $GroupName + '" ><import source="ActiveDirectory" domainName="' +$DomainName + '" siteRole="' + $SiteRole +'" /></group></tsRequest>')
+      $body = ('<tsRequest><group name="' + $GroupName + '" ><import source="ActiveDirectory" domainName="' +$DomainName + '" siteRole="' + $NewSiteRole +'" /></group></tsRequest>')
       $response = Invoke-RestMethod -Uri ${protocol}://$server/api/$api_ver/sites/$siteID/groups/$GroupID -Headers $headers -Method PUT -Body $body
       $response.tsResponse.group
     }
@@ -655,7 +656,7 @@ function TS-QueryDataSources
    ForEach ($detail in $response.tsResponse.datasources.datasource)
    {
     $owner = TS-GetUserDetails -ID $detail.owner.id
-    $DataSources = [pscustomobject]@{Name=$detail.name; Project=$detail.project.name; Owner=$owner; UpdatedAt = $detail.updatedAt;ContentURL=$detail.ContentURL}
+    $DataSources = [pscustomobject]@{Name=$detail.name; Project=$detail.project.name; Owner=$owner; UpdatedAt = $detail.updatedAt;ContentURL=$detail.ContentURL;Type=$detail.type}
     $DataSources
    }
   }
@@ -2085,8 +2086,9 @@ function TS-QueryViewsForSite
      ForEach ($detail in $response.tsResponse.Views.view)
       { 
        $WorkbookName = TS-GetWorkbookDetails -ID $detail.workbook.id
+       $ProjectName = TS-GetProjectDetails -ProjectID $WorkbookName.project.id
        $Owner = TS-GetUserDetails -ID $detail.owner.id
-       $Views = [pscustomobject]@{ViewName=$detail.name; ViewCount=$detail.usage.TotalViewCount; Owner=$Owner; WorkbookName = $workbookName; ContentURL=$detail.contentURL}
+       $Views = [pscustomobject]@{ViewName=$detail.name; ViewCount=$detail.usage.TotalViewCount; Owner=$Owner; WorkbookName = $workbookName; ProjectName = $ProjectName; ContentURL=$detail.contentURL}
        $views
       }
     }
@@ -2347,6 +2349,32 @@ function TS-AddTagsToWorkbook
  catch {"Problem adding tags to Workbook:" + $WorkbookName}
 }
 
+function TS-AddTagsToDataSource
+{
+ param(
+ [string[]] $DataSourceName = "",
+ [string[]] $ProjectName = "",
+ [string[]] $Tags = ""
+ )
+ try
+ {
+  $DataSourceID = TS-getDataSourceDetails -Name $DataSourceName -ProjectName $ProjectName
+  $DataSourceID
+
+  $body = ''
+  $TagsArrary = $Tags.Split(",")
+  Foreach ($Tag in $TagsArrary) {$body += '<tag label ="'+ $Tag +'" />'}
+ 
+  $body = ('<tsRequest><tags>'  + $body +  ' </tags></tsRequest>')
+
+  $response = Invoke-RestMethod -Uri ${protocol}://$server/api/$api_ver/sites/$siteID/datasources/$DataSourceID/tags -Headers $headers -Method Put -Body $body
+  $response.tsResponse.tags.tag
+ }
+ catch {"Problem adding tags to DataSource:" + $DataSourceName}
+}
+
+
+
 function TS-DeleteTagFromWorkbook
 {
  param(
@@ -2362,6 +2390,24 @@ function TS-DeleteTagFromWorkbook
  }
  catch {"Problem remove tag from Workbook:" + $WorkbookName}
 }
+
+function TS-DeleteTagFromDataSource
+{
+ param(
+ [string[]] $DataSourceName = "",
+ [string[]] $ProjectName = "",
+ [string[]] $Tag = ""
+ )
+ try
+ {
+  $DataSourceID = TS-getDataSourceDetails -Name $DataSourceName -ProjectName $ProjectName
+  $DataSourceID
+  $response = Invoke-RestMethod -Uri ${protocol}://$server/api/$api_ver/sites/$siteID/datasources/$DataSourceID/tags/$Tag -Headers $headers -Method Delete
+ }
+ catch {"Problem remove tag from DataSource:" + $DataSourceName}
+}
+
+
 
 function TS-GetViewDetails
 {
@@ -2538,13 +2584,14 @@ Function TS-QueryViewImage
  )
  try
   {
-   $suffix = ""
+   $suffix = "?Region=South"
    $viewID = TS-GetViewDetails -WorkbookName $WorkbookName -ProjectName $ProjectName -ViewName $ViewName
-   If ($ImageQuality = "High")
+   If ($ImageQuality -eq "High")
     {$suffix = "?resolution=high"}
 
    $url = $protocol.trim() + "://" + $server +"/api/" + $api_ver+ "/sites/" + $siteID + "/views/" + $viewID + "/image" + $suffix
-   
+   $url
+
    if ($FileName -eq "None")
      { 
       $response = Invoke-RestMethod -Uri $url -Headers $headers -Method Get
@@ -2657,19 +2704,148 @@ function TS-RemoveDataSourceRevision
  [string[]] $ProjectName = "",
  [string[]] $RevisionNumber =""
  )
-# try
- #{
+try
+ {
   $DataSourceID = TS-GetDataSourceDetails -Name $DataSourceName -ProjectName $ProjectName
   $response = Invoke-RestMethod -Uri ${protocol}://$server/api/$api_ver/sites/$siteID/datasources/$datasourceID/revisions/$RevisionNumber -Headers $headers -Method Delete
   "Removed Datasource Revision: " + $RevisionNumber
- # }
-  #catch {"Unable to remove Datasource Revision: " + $RevisionNumber  }
+ }
+  catch {"Unable to remove Datasource Revision: " + $RevisionNumber  }
  }
 
+ 
+
+function TS-CreateSubscription
+{
+param(
+ [string[]] $Subject = "",
+ [validateset('Workbook','View')][string[]] $Type = "",
+ [string[]] $WorkbookName = "",
+ [string[]] $ViewName = "",
+ [string[]] $ProjectName = "",
+ [string[]] $Schedule = "",
+ [string[]] $UserName = ""
+ 
+ )
+ try
+  {
+
+  If($Type -eq 'View')
+   {
+     $ContentID = TS-GetViewDetails -WorkbookName $WorkbookName -ProjectName $ProjectName -ViewName $ViewName
+   }
+  else
+   {
+    $ContentID = TS-GetWorkbookDetails -Name $WorkbookName -ProjectName $ProjectName
+   }
+
+  $ScheduleID = TS-GetScheduleDetails -name $Schedule
+  $UserID = TS-GetUserDetails -name $UserName
+
+  $ContentID
+  $scheduleID
+  $UserID
+
+
+  $Body = '<tsRequest>
+  <subscription subject="' + $subject +'">
+    <content type="' + $Type + '" id="' + $ContentID +'"  />
+    <schedule id="' + $ScheduleID + '" />
+    <user id="' + $UserID + '" />
+  </subscription>
+  </tsRequest>'
+
+   $response = Invoke-RestMethod -Uri ${protocol}://$server/api/$api_ver/sites/$siteID/subscriptions -Headers $headers -Method POST -Body $Body 
+   $response.tsresponse.subscription 
+ 
+ }
+ catch {"Unable to Create Subscription"}
+
+}
+
+
+function TS-QuerySubscriptions
+{
+#  try
+# {
+  $PageSize = 100
+  $PageNumber = 1
+  $done = 'FALSE'
+
+  While ($done -eq 'FALSE')
+   { 
+    $response = Invoke-RestMethod -Uri ${protocol}://$server/api/$api_ver/sites/$siteID/subscriptions?pageSize=$PageSize`&pageNumber=$PageNumber -Headers $headers -Method Get
+    $totalAvailable = $response.tsResponse.pagination.totalAvailable
+
+    If ($PageSize*$PageNumber -gt $totalAvailable) { $done = 'TRUE'}
+
+    $PageNumber += 1
+
+    ForEach ($detail in $response.tsResponse.subscriptions.subscription)
+     {
+        
+        if ($detail.content.type -eq 'View')
+         {
+             $detail.content.id
+             $response = Invoke-RestMethod -Uri ${protocol}://$server/api/$api_ver/sites/$siteID/views?filter=id:eq:$detail.content.id -Headers $headers -Method Get
+             $ViewName = $response.views.view.name
+         } 
+         else
+         {
+        #  $WorkbookName = TS-GetWorkbookDetails  -ID$detail.content.id
+         }
+        
+        #$detail
+        $Subscriptions = [pscustomobject]@{Subject=$detail.subject; User=$detail.user.name; Schedule=$detail.schedule.name; Type=$detail.content.type; ViewName=$ViewName; WorkbookName=$WorkbookName}
 
 
 
-    
+        $Subscriptions
+
+#      $ProjectName = TS-GetProjectDetails -ProjectID $detail.Project.ID
+#      $Owner = TS-GetUserDetails -ID $detail.Owner.ID
+
+#      $Workbooks = [pscustomobject]@{WorkbookName=$detail.name; ShowTabs=$detail.ShowTabs; ContentURL=$detail.contentURL; Size=$detail.size; CreatedAt=$detail.CreatedAt; UpdatedAt=$detail.UpdatedAt; Project=$ProjectName; Owner=$Owner; Tags=$taglist}
+#      $workbooks
+     }
+   }
+ #}
+# catch {"Unable to Query Subscriptions for Site"}
+}
+
+function TS-GetSubscriptionDetails
+{
+
+  param(
+ [string[]] $Name = "",
+ [string[]] $ID = "",
+ [string[]] $ProjectName = ""
+ )
+
+ $PageSize = 100
+ $PageNumber = 1
+ $done = 'FALSE'
+
+ While ($done -eq 'FALSE')
+ {
+
+   $response = Invoke-RestMethod -Uri ${protocol}://$server/api/$api_ver/sites/$siteID/users/$userId/workbooks?pageSize=$PageSize`&pageNumber=$PageNumber -Headers $headers -Method Get
+
+   $totalAvailable = $response.tsResponse.pagination.totalAvailable
+
+   If ($PageSize*$PageNumber -gt $totalAvailable) { $done = 'TRUE'}
+
+   $PageNumber += 1
+
+   foreach ($detail in $response.tsResponse.workbooks.workbook)
+    {
+     if ($Name -eq $detail.name -and $ProjectName -eq $detail.project.name){Return $detail.ID}
+     if ($ID -eq $detail.ID){Return $detail.Name}
+    }
+ }
+}
+
+  
 ## Sign in / Out
 Export-ModuleMember -Function TS-SignIn
 Export-ModuleMember -Function TS-SignOut
@@ -2733,6 +2909,8 @@ Export-ModuleMember -Function TS-QueryDataSourceConnections
 Export-ModuleMember -Function TS-DeleteDataSource
 Export-ModuleMember -Function TS-UpdateDataSource
 Export-ModuleMember -Function TS-UpdateDataSourceConnection
+Export-ModuleMember -Function TS-AddTagsToDataSource
+Export-ModuleMember -Function TS-DeleteTagFromDataSource
 
 ## Favorites Management
 Export-ModuleMember -Function TS-AddWorkbookToFavorites
@@ -2769,3 +2947,11 @@ Export-ModuleMember -Function TS-RemoveWorkbookRevision
 Export-ModuleMember -Function TS-RemoveDataSourceRevision
 Export-ModuleMember -Function TS-DownloadDataSourceRevision
 Export-ModuleMember -Function TS-DownloadWorkbookRevision
+
+
+# Subscriptions
+Export-ModuleMember -Function TS-CreateSubscription
+Export-ModuleMember -Function TS-QuerySubscription
+Export-ModuleMember -Function TS-QuerySubscriptions
+Export-ModuleMember -Function TS-UpdateSubscription
+Export-ModuleMember -Function TS-DeleteSubscription
