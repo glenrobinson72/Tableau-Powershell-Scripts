@@ -2,7 +2,7 @@
 #    
 #   Module: Tableau-REST.psm1
 #   Description: Tableau REST API through Powershell
-#   Version: 1.9
+#   Version: 1.10
 
 #   Author: Glen Robinson (glen.robinson@interworks.co.uk)
 #
@@ -2086,9 +2086,10 @@ function TS-QueryViewsForSite
      ForEach ($detail in $response.tsResponse.Views.view)
       { 
        $WorkbookName = TS-GetWorkbookDetails -ID $detail.workbook.id
-       $ProjectName = TS-GetProjectDetails -ProjectID $WorkbookName.project.id
+       $ProjectName = TS-GetWorkbookProject -ID $detail.workbook.id
        $Owner = TS-GetUserDetails -ID $detail.owner.id
-       $Views = [pscustomobject]@{ViewName=$detail.name; ViewCount=$detail.usage.TotalViewCount; Owner=$Owner; WorkbookName = $workbookName; ProjectName = $ProjectName; ContentURL=$detail.contentURL}
+       $viewURL = TS-GetViewURL -ContentURL $detail.contentURL
+       $Views = [pscustomobject]@{ViewName=$detail.name; ViewCount=$detail.usage.TotalViewCount; Owner=$Owner; WorkbookName = $workbookName; ProjectName = $ProjectName; ContentURL=$detail.contentURL; ViewURL= $viewURL}
        $views
       }
     }
@@ -2109,13 +2110,40 @@ function TS-QueryViewsForWorkbook
 
    ForEach ($detail in $response.tsResponse.Views.view)
     {
-     $Views = [pscustomobject]@{ViewName=$detail.name; ViewCount=$detail.usage.TotalViewCount; ContentURL=$detail.contentURL}
+     $viewURL = TS-GetViewURL -ContentURL $detail.contentURL
+
+     $Views = [pscustomobject]@{ViewName=$detail.name; ViewCount=$detail.usage.TotalViewCount; ContentURL=$detail.contentURL; ViewURL= $viewURL}
      $views
     }
   }
   catch{"Unable to Query Views for Workbook: " + $WorkbookName}
 }
  
+function TS-GetViewURL
+{
+  param
+  (
+   [string[]] $ContentURL =""
+  )
+  $ViewURL = $contentURL.Replace("/sheets/","/")
+  $Site_Details = TS-QuerySite
+  $site_ID = $site_Details.contentURL
+
+  if ($Site_Details.contentURL -eq "")
+   {
+     $URL ="$protocol`://$server/#/views/$ViewURL"
+     Return $URL
+   }
+  else
+   {
+     $URL = "$protocol`://$server/#/site/$site_ID/views/$ViewURL"
+     Return $URL
+   } 
+}
+
+
+
+
 function TS-QueryWorkbooksForUser
 {
   param
@@ -2168,8 +2196,6 @@ function TS-QueryWorkbooksForSite
   $PageNumber = 1
   $done = 'FALSE'
 
-
-
   While ($done -eq 'FALSE')
    { 
     $response = Invoke-RestMethod -Uri ${protocol}://$server/api/$api_ver/sites/$siteID/workbooks?pageSize=$PageSize`&pageNumber=$PageNumber -Headers $headers -Method Get
@@ -2204,16 +2230,13 @@ function TS-GetWorkbookDetails
  [string[]] $ProjectName = ""
  )
 
- $userID = TS-GetUserDetails -name $username
-
  $PageSize = 100
  $PageNumber = 1
  $done = 'FALSE'
 
  While ($done -eq 'FALSE')
  {
-
-   $response = Invoke-RestMethod -Uri ${protocol}://$server/api/$api_ver/sites/$siteID/users/$userId/workbooks?pageSize=$PageSize`&pageNumber=$PageNumber -Headers $headers -Method Get
+   $response = Invoke-RestMethod -Uri ${protocol}://$server/api/$api_ver/sites/$siteID/workbooks?pageSize=$PageSize`&pageNumber=$PageNumber -Headers $headers -Method Get
 
    $totalAvailable = $response.tsResponse.pagination.totalAvailable
 
@@ -2225,6 +2248,34 @@ function TS-GetWorkbookDetails
     {
      if ($Name -eq $detail.name -and $ProjectName -eq $detail.project.name){Return $detail.ID}
      if ($ID -eq $detail.ID){Return $detail.Name}
+    }
+ }
+}
+
+function TS-GetWorkbookProject
+{
+
+  param(
+ [string[]] $ID = ""
+ )
+
+ $PageSize = 100
+ $PageNumber = 1
+ $done = 'FALSE'
+
+ While ($done -eq 'FALSE')
+ {
+   $response = Invoke-RestMethod -Uri ${protocol}://$server/api/$api_ver/sites/$siteID/workbooks?pageSize=$PageSize`&pageNumber=$PageNumber -Headers $headers -Method Get
+
+   $totalAvailable = $response.tsResponse.pagination.totalAvailable
+
+   If ($PageSize*$PageNumber -gt $totalAvailable) { $done = 'TRUE'}
+
+   $PageNumber += 1
+
+   foreach ($detail in $response.tsResponse.workbooks.workbook)
+    {
+     if ($ID -eq $detail.ID){Return $detail.project.name}
     }
  }
 }
@@ -2374,7 +2425,6 @@ function TS-AddTagsToDataSource
 }
 
 
-
 function TS-DeleteTagFromWorkbook
 {
  param(
@@ -2406,7 +2456,6 @@ function TS-DeleteTagFromDataSource
  }
  catch {"Problem remove tag from DataSource:" + $DataSourceName}
 }
-
 
 
 function TS-GetViewDetails
