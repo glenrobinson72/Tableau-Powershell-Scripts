@@ -2,14 +2,14 @@
 #    
 #   Module: Tableau-REST.psm1
 #   Description: Tableau REST API through Powershell
-#   Version: 1.10
+#   Version: 1.10.1
 
 #   Author: Glen Robinson (glen.robinson@interworks.co.uk)
 #
 #
 ###############################################
 
-$global:api_ver = '2.4'
+$global:api_ver = '2.7'
 
 ################## SIGN IN AND SIGN OUT ################################
 
@@ -26,7 +26,7 @@ function TS-ServerInfo
   }
   catch  
    {
-     $global:api_ver = '2.2'
+     $global:api_ver = '2.7'
    }
 }
 
@@ -128,7 +128,7 @@ function TS-CreateProject
   $response = Invoke-RestMethod -Uri ${protocol}://$server/api/$api_ver/sites/$siteID/projects -Headers $headers -Method POST -Body $request_body
   $response.tsResponse.project
  } 
- catch {"Unable to create Project: " + $ProjectName}
+ catch {"Unable to create Project: " + $ProjectName + " :- " + $_.Exception.Message}
 }
 
 function TS-UpdateProject
@@ -152,7 +152,7 @@ function TS-UpdateProject
   $response = Invoke-RestMethod -Uri ${protocol}://$server/api/$api_ver/sites/$siteID/projects/$ProjectID -Headers $headers -Method Put -Body $request_body
   $response.tsResponse.project
  }
- catch {"Unable to Update Project: " + $ProjectName}
+ catch {"Unable to Update Project: " + $ProjectName + " :- " + $_.Exception.Message}
 
 }
 
@@ -167,7 +167,7 @@ function TS-DeleteProject
    $response = Invoke-RestMethod -Uri ${protocol}://$server/api/$api_ver/sites/$siteID/projects/$ProjectID -Headers $Headers -Method Delete
    $response.tsResponse
   }
-  catch {"Unable to delete Project: "+$ProjectName}
+  catch {"Unable to delete Project: "+$ProjectName  + " :- " + $_.Exception.Message}
 }
 
 
@@ -221,7 +221,7 @@ function TS-QuerySites
      $response.tsresponse.Sites.site
    }
  }
- catch {"Unable to Query Sites."}
+ catch {"Unable to Query Sites." + " :- " + $_.Exception.Message}
 }
 
 function TS-QuerySite
@@ -265,7 +265,7 @@ function TS-UpdateSite
   $response = Invoke-RestMethod -Uri ${protocol}://$server/api/$api_ver/sites/$siteID -Headers $headers -Method Put -Body $body
   $response.tsResponse.Site
  }
- catch{"Problem updating Site: " + $SiteName }
+ catch{"Problem updating Site: " + $SiteName + " :- " + $_.Exception.Message }
 }
 
 
@@ -295,7 +295,7 @@ function TS-CreateSite
   $response = Invoke-RestMethod -Uri ${protocol}://$server/api/$api_ver/sites -Headers $headers -Method POST -Body $body
   $response.tsResponse.Site
  }
- catch{"Problem Creating Site: " + $SiteName }
+ catch{"Problem Creating Site: " + $SiteName + " :- " + $_.Exception.Message }
 }
 
 function TS-ChangeToSite
@@ -322,7 +322,7 @@ function TS-DeleteSite
     $response = Invoke-RestMethod -Uri ${protocol}://$server/api/$api_ver/sites/$siteID -Headers $Headers -Method Delete
     $response.tsResponse
    }
-   catch {"Unable to delete Site."}
+   catch {"Unable to delete Site." + " :- " + $_.Exception.Message}
  }
 }
 
@@ -353,7 +353,7 @@ function TS-CreateGroup
       $response.tsResponse.group
     }
   }
- catch {"Unable to Create Group: " + $GroupName}
+ catch {"Unable to Create Group: " + $GroupName + " :- " + $_.Exception.Message}
 }
 
 
@@ -372,7 +372,7 @@ param(
    $response = Invoke-RestMethod -Uri ${protocol}://$server/api/$api_ver/sites/$siteID/groups/$GroupID -Headers $Headers -Method Delete
    $response.tsResponse
   }
-  catch {"Unable to delete Group: "+$GroupName}
+  catch {"Unable to delete Group: "+$GroupName + " :- " + $_.Exception.Message}
 }
 
 function TS-QueryGroups
@@ -398,7 +398,7 @@ function TS-QueryGroups
        }
     }
    }
-  catch {"Unable to query Groups."}
+  catch {"Unable to query Groups." + " :- " + $_.Exception.Message}
 }
 
 
@@ -430,7 +430,7 @@ function TS-UpdateGroup
       $response.tsResponse.group
     }
   }
-  catch {"Unable to Update Group: "+$GroupName}
+  catch {"Unable to Update Group: "+$GroupName + " :- " + $_.Exception.Message}
 }
 
     
@@ -472,7 +472,7 @@ function TS-GetUsersOnSite
      $response.tsResponse.Users.User
     }
   }
-  catch {"Unable to Get User List from Site"}
+  catch {"Unable to Get User List from Site :- " + $_.Exception.Message}
 }
 
 function TS-AddUserToGroup
@@ -489,7 +489,7 @@ function TS-AddUserToGroup
    $response = Invoke-RestMethod -Uri ${protocol}://$server/api/$api_ver/sites/$siteID/groups/$GroupID/users -Headers $headers -Method POST -Body $body
    $response.tsResponse.user
   }
-  catch {"Unable to Add User "+ $UserAccount + " to Group: "+$GroupName}
+  catch {"Unable to Add User "+ $UserAccount + " to Group: "+$GroupName + " :- " + $_.Exception.Message}
 }
 
 
@@ -505,7 +505,7 @@ function TS-RemoveUserFromGroup
    $UserID  = TS-GetUserDetails -name $UserAccount
    $response = Invoke-RestMethod -Uri ${protocol}://$server/api/$api_ver/sites/$siteID/groups/$GroupID/users/$UserID -Headers $headers -Method DELETE 
   }
-  catch {"Unable to Remove User "+ $UserAccount + " from Group: "+$GroupName}
+  catch {"Unable to Remove User "+ $UserAccount + " from Group: "+$GroupName + " :- " + $_.Exception.Message}
 }
 
 function TS-RemoveUserFromSite
@@ -518,7 +518,7 @@ function TS-RemoveUserFromSite
    $UserID  = TS-GetUserDetails -name $UserAccount
    $response = Invoke-RestMethod -Uri ${protocol}://$server/api/$api_ver/sites/$siteID/users/$UserID -Headers $headers -Method DELETE 
   }
-  catch {"Unable to Remove User from Site: "+ $UserAccount }
+  catch {"Unable to Remove User from Site: "+ $UserAccount + " :- " + $_.Exception.Message}
 }
 
 
@@ -572,7 +572,7 @@ param(
      $response.tsResponse.Users.User
     }
   }
-  catch {"Unable to Get Users in Group: "+$GroupName}
+  catch {"Unable to Get Users in Group: "+$GroupName + " :- " + $_.Exception.Message}
 }
 
 
@@ -594,7 +594,7 @@ function TS-QueryUser
   }
   catch
   {
-  "Unable to Get User Information: "+$UserAccount
+  "Unable to Get User Information: "+$UserAccount + " :- " + $_.Exception.Message
   }
 }
 
@@ -612,7 +612,7 @@ function TS-AddUserToSite
    $response = Invoke-RestMethod -Uri ${protocol}://$server/api/$api_ver/sites/$siteID/users -Headers $headers -Method POST -Body $body
    $response.tsResponse.user
   }
-  catch {"Unable to Create User: " + $UserAccount}
+  catch {"Unable to Create User: " + $UserAccount + " :- " + $_.Exception.Message}
 }
 
 function TS-UpdateUser
@@ -640,7 +640,7 @@ function TS-UpdateUser
     $response = Invoke-RestMethod -Uri ${protocol}://$server/api/$api_ver/sites/$siteID/users/$UserID -Headers $headers -Method Put -Body $body
     $response.tsResponse.User
    }
-   catch{"Problem updating User: " + $UserAccount }
+   catch{"Problem updating User: " + $UserAccount + " :- " + $_.Exception.Message }
 }
 
 
@@ -649,19 +649,32 @@ function TS-UpdateUser
 
 function TS-QueryDataSources
 {
- try
+  try
   {
-   $response = Invoke-RestMethod -Uri ${protocol}://$server/api/$api_ver/sites/$siteID/datasources -Headers $headers -Method Get
 
-   ForEach ($detail in $response.tsResponse.datasources.datasource)
-   {
-    $owner = TS-GetUserDetails -ID $detail.owner.id
-    $DataSources = [pscustomobject]@{Name=$detail.name; Project=$detail.project.name; Owner=$owner; UpdatedAt = $detail.updatedAt;ContentURL=$detail.ContentURL;Type=$detail.type}
-    $DataSources
-   }
+    $PageSize = 100
+    $PageNumber = 1
+    $done = 'FALSE'
+
+    While ($done -eq 'FALSE')
+    {
+     $response = Invoke-RestMethod -Uri ${protocol}://$server/api/$api_ver/sites/$siteID/datasources?pageSize=$PageSize`&pageNumber=$PageNumber -Headers $headers -Method Get
+     $totalAvailable = $response.tsResponse.pagination.totalAvailable
+
+     If ($PageSize*$PageNumber -gt $totalAvailable) { $done = 'TRUE'}
+
+     $PageNumber += 1
+
+     ForEach ($detail in $response.tsResponse.datasources.datasource)
+      {
+       $owner = TS-GetUserDetails -ID $detail.owner.id
+       $DataSources = [pscustomobject]@{Name=$detail.name; Project=$detail.project.name; Owner=$owner; UpdatedAt = $detail.updatedAt;ContentURL=$detail.ContentURL;Type=$detail.type}
+       $DataSources
+      }
+    }
   }
-  catch{"Unabled to query Data Sources."}
-}  
+  catch {"Unable to query DataSources :- " + $_.Exception.Message}
+}
 
 
 function TS-QueryDataSource
@@ -683,7 +696,7 @@ function TS-QueryDataSource
     $DataSource
    }
  }
- catch { "Unable to Query Data Source Connections: " + $DataSourceName}
+ catch { "Unable to Query Data Source Connections: " + $DataSourceName + " :- " + $_.Exception.Message}
 }
 
 
@@ -700,7 +713,7 @@ function TS-QueryDataSourceConnections
    $response = Invoke-RestMethod -Uri ${protocol}://$server/api/$api_ver/sites/$siteID/datasources/$DS_ID/connections -Headers $headers -Method GET 
   $response.tsResponse.Connections.connection
  }
-catch { "Unable to Query Data Source Connections: " + $DataSourceName}
+catch { "Unable to Query Data Source Connections: " + $DataSourceName + " :- " + $_.Exception.Message}
     
 }
 
@@ -789,7 +802,7 @@ Content-Type:  application/octet-stream
   $response = $wc.UploadString($url ,'POST', $request_body)
   "Data Source " + $DataSourceName + " was successfully published to " + $ProjectName + " Project."
  }
- catch {"Unable to publish Data Source."}
+ catch {"Unable to publish Data Source. " + $DataSourceName + " :- " + $_.Exception.Message}
 
 }
 
@@ -851,7 +864,7 @@ $response = $wc.UploadString($url ,'POST', $request_body)
 "Workbook published successfully."
 
  }
- catch {"Unable to publish workbook."}
+ catch {"Unable to publish workbook. " + $WorkbookName + " :- " + $_.Exception.Message }
 }
 
 
@@ -867,7 +880,7 @@ function TS-DeleteDataSource
    $response = Invoke-RestMethod -Uri ${protocol}://$server/api/$api_ver/sites/$siteID/datasources/$DS_ID -Headers $headers -Method DELETE 
    $response.tsresponse
  }
- catch { "Unable to Delete Data Source: " + $DataSourceName}
+ catch { "Unable to Delete Data Source: " + $DataSourceName + " :- " + $_.Exception.Message}
 }
 
 
@@ -895,7 +908,7 @@ function TS-UpdateDataSource
    $response = Invoke-RestMethod -Uri ${protocol}://$server/api/$api_ver/sites/$siteID/datasources/$DS_ID -Headers $headers -Method Put -Body $body
    $response.tsResponse.datasource
  }
- catch { "Unable to Update Data Source: " + $DataSourceName}
+ catch { "Unable to Update Data Source: " + $DataSourceName + " :- " + $_.Exception.Message}
 }
 
 function TS-UpdateDataSourceConnection
@@ -925,7 +938,7 @@ function TS-UpdateDataSourceConnection
    $response = Invoke-RestMethod -Uri ${protocol}://$server/api/$api_ver/sites/$siteID/datasources/$DS_ID/connection -Headers $headers -Method Put -Body $body
    $response.tsResponse.connection
  }
- catch { "Unable to Update Data Source: " + $DataSourceName}
+ catch { "Unable to Update Data Source: " + $DataSourceName + " :- " + $_.Exception.Message}
 }
 
 
@@ -977,7 +990,7 @@ param(
 
 
    }
-  catch{"Unable to query Project Permissions: " + $ProjectName  }
+  catch{"Unable to query Project Permissions: " + $ProjectName + " :- " + $_.Exception.Message}
 }
 
 
@@ -1015,7 +1028,7 @@ param(
         }
       }
    }
-  catch{"Unable to query Workbook Permissions: " + $WorkbookName  }
+  catch{"Unable to query Workbook Permissions: " + $WorkbookName + " :- " + $_.Exception.Message }
 }
 
 
@@ -1054,7 +1067,7 @@ param(
         }
       }
    }
-  catch{"Unable to query DataSources Permissions: " + $DataSourceName }
+  catch{"Unable to query DataSources Permissions: " + $DataSourceName + " :- " + $_.Exception.Message }
 }
 
 
@@ -1339,7 +1352,7 @@ try
 
   "Project Permissions updated."
  }
- catch {"Unable to update Project Permissions."}
+ catch {"Unable to update Project Permissions." + " :- " + $_.Exception.Message}
 }
 
 function TS-UpdateWorkbookPermissions
@@ -1475,7 +1488,7 @@ try
 
   "Workbook Permissions updated."
  }
- catch {"Unable to update Workbook Permissions."}
+ catch {"Unable to update Workbook Permissions. :- " + $_.Exception.Message}
 }
 
 
@@ -1596,7 +1609,7 @@ try
 
   "DataSource Permissions updated."
  }
- catch {"Unable to update DataSource Permissions."}
+ catch {"Unable to update DataSource Permissions. :- " + $_.Exception.Message}
 }
 
 
@@ -1624,7 +1637,7 @@ function TS-QuerySchedules
    }
   
  }
- catch{"Unable to Query Schedules"}
+ catch{"Unable to Query Schedules :- " + $_.Exception.Message}
 }
 
 
@@ -1724,7 +1737,7 @@ try
    $response.tsresponse.schedule
    
  }
- catch{"Unable to Update Schedule."}
+ catch{"Unable to Update Schedule. " + $ScheduleName+ " :- " + $_.Exception.Message}
 }
 
 function TS-DeleteSchedule
@@ -1739,7 +1752,7 @@ try
   $ID
    $response = Invoke-RestMethod -Uri ${protocol}://$server/api/$api_ver/schedules/$ID -Headers $headers -Method DELETE
  }
- catch{"Unable to Delete Schedule."}
+ catch{"Unable to Delete Schedule. " + $ScheduleName + " :- " + $_.Exception.Message}
 }
 
 
@@ -1839,7 +1852,7 @@ try
    $response.tsresponse.schedule
    
  }
- catch{"Unable to Create Schedule."}
+ catch{"Unable to Create Schedule. " +$ScheduleName + " :- " + $_.Exception.Message }
 }
 
 
@@ -1875,7 +1888,7 @@ function TS-QueryExtractRefreshTasks
      }
    }
  }
- catch{"Unable to Query Extract Refresh Tasks"}
+ catch{"Unable to Query Extract Refresh Tasks. " + $ScheduleName + " :- " + $_.Exception.Message }
 }
 
 
@@ -1912,6 +1925,7 @@ While ($done -eq 'FALSE')
 
 function TS-GetExtractRefreshTasks
 {
+   ## NEEDs WORK ##
      $response = Invoke-RestMethod -Uri ${protocol}://$server/api/$api_ver/sites/$siteID/tasks/extractRefreshes -Headers $headers -Method Get
      $response.tsResponse.tasks.task.extractRefresh
 }
@@ -1981,7 +1995,7 @@ param
    "Workbook " + $WorkbookName + " download successfully to " + $FileName
 
   }
- catch{"Unable to download workbook. " + $WorkBookName}
+ catch{"Unable to download workbook. " + $WorkBookName + " :- " + $_.Exception.Message}
 }
 
 function TS-DownloadWorkbookRevision
@@ -2008,7 +2022,7 @@ param
    "Workbook " + $WorkbookName + " download successfully to " + $FileName
 
  }
- catch{"Unable to download workbook revision. " + $WorkBookName}
+ catch{"Unable to download workbook revision. " + $WorkBookName + " :- " + $_.Exception.Message}
 }
 
 
@@ -2034,7 +2048,7 @@ param
    $wc.DownloadFile($url, $FileName)
    "Data Source " + $DatasourceName + " download successfully to " + $FileName
   }
- catch{"Unable to download datasource. " + $DatasourceName }
+ catch{"Unable to download datasource. " + $DatasourceName + " :- " + $_.Exception.Message }
 }
 
 function TS-DownloadDataSourceRevision
@@ -2059,7 +2073,7 @@ param
    $wc.DownloadFile($url, $FileName)
    "Data Source " + $DatasourceName + " download successfully to " + $FileName
   }
- catch{"Unable to download datasource revision. " + $DatasourceName }
+ catch{"Unable to download datasource revision. " + $DatasourceName + " :- " + $_.Exception.Message}
 }
 
 
@@ -2068,8 +2082,8 @@ param
 
 function TS-QueryViewsForSite
 {
- # try
- # {
+  try
+  {
    $PageSize = 100
    $PageNumber = 1
    $done = 'FALSE'
@@ -2093,8 +2107,8 @@ function TS-QueryViewsForSite
        $views
       }
     }
- # }
- # catch {"Unable to Query Views"}
+  }
+  catch {"Unable to Query Views" + " :- " + $_.Exception.Message}
 }
 
 function TS-QueryViewsForWorkbook
@@ -2116,7 +2130,7 @@ function TS-QueryViewsForWorkbook
      $views
     }
   }
-  catch{"Unable to Query Views for Workbook: " + $WorkbookName}
+  catch{"Unable to Query Views for Workbook: " + $WorkbookName + " :- " + $_.Exception.Message}
 }
  
 function TS-GetViewURL
@@ -2184,7 +2198,7 @@ function TS-QueryWorkbooksForUser
      }
    }
  }
- catch {"Unable to Query Workbooks for User"}
+ catch {"Unable to Query Workbooks for User :- " + $_.Exception.Message}
 }
 
 
@@ -2195,7 +2209,7 @@ function TS-QueryWorkbooksForSite
   $PageSize = 100
   $PageNumber = 1
   $done = 'FALSE'
-
+  
   While ($done -eq 'FALSE')
    { 
     $response = Invoke-RestMethod -Uri ${protocol}://$server/api/$api_ver/sites/$siteID/workbooks?pageSize=$PageSize`&pageNumber=$PageNumber -Headers $headers -Method Get
@@ -2218,7 +2232,7 @@ function TS-QueryWorkbooksForSite
      }
    }
  }
- catch {"Unable to Query Workbooks for Site"}
+ catch {"Unable to Query Workbooks for Site :- " + $_.Exception.Message}
 }
 
 function TS-GetWorkbookDetails
@@ -2304,7 +2318,7 @@ function TS-QueryWorkbook
       $workbook
 
   }
-  catch{"Unable to Query Workbook: " + $WorkbookName}
+  catch{"Unable to Query Workbook: " + $WorkbookName + " :- " + $_.Exception.Messaget}
 }
 
 function TS-QueryWorkbookConnections
