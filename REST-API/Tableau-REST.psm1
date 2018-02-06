@@ -649,6 +649,13 @@ function TS-UpdateUser
 
 function TS-QueryDataSources
 {
+
+  param
+  (
+   [string[]] $Filter ="")
+
+    if ($Filter -ne '') {$Filter += "&filter="+ $Filter }
+
   try
   {
 
@@ -658,7 +665,7 @@ function TS-QueryDataSources
 
     While ($done -eq 'FALSE')
     {
-     $response = Invoke-RestMethod -Uri ${protocol}://$server/api/$api_ver/sites/$siteID/datasources?pageSize=$PageSize`&pageNumber=$PageNumber -Headers $headers -Method Get
+     $response = Invoke-RestMethod -Uri ${protocol}://$server/api/$api_ver/sites/$siteID/datasources?$filter`&pageSize=$PageSize`&pageNumber=$PageNumber -Headers $headers -Method Get
      $totalAvailable = $response.tsResponse.pagination.totalAvailable
 
      If ($PageSize*$PageNumber -gt $totalAvailable) { $done = 'TRUE'}
@@ -668,7 +675,7 @@ function TS-QueryDataSources
      ForEach ($detail in $response.tsResponse.datasources.datasource)
       {
        $owner = TS-GetUserDetails -ID $detail.owner.id
-       $DataSources = [pscustomobject]@{Name=$detail.name; Project=$detail.project.name; Owner=$owner; UpdatedAt = $detail.updatedAt;ContentURL=$detail.ContentURL;Type=$detail.type}
+       $DataSources = [pscustomobject]@{Name=$detail.name; Project=$detail.project.name; Owner=$owner; UpdatedAt = $detail.updatedAt;ContentURL=$detail.ContentURL;Type=$detail.type;ID=$detail.ID}
        $DataSources
       }
     }
@@ -2460,7 +2467,7 @@ function TS-DeleteTagFromWorkbook
   $workbookID
   $response = Invoke-RestMethod -Uri ${protocol}://$server/api/$api_ver/sites/$siteID/workbooks/$workbookID/tags/$Tag -Headers $headers -Method Delete
  }
- catch {"Problem remove tag from Workbook:" + $WorkbookName}
+ catch {"Problem removing tag from Workbook:" + $WorkbookName}
 }
 
 function TS-DeleteTagFromDataSource
@@ -2468,15 +2475,16 @@ function TS-DeleteTagFromDataSource
  param(
  [string[]] $DataSourceName = "",
  [string[]] $ProjectName = "",
- [string[]] $Tag = ""
+ [string[]] $Tag = "",
+ [string[]] $DataSourceID = ""
  )
  try
  {
-  $DataSourceID = TS-getDataSourceDetails -Name $DataSourceName -ProjectName $ProjectName
+  if ($DataSourceID -eq ''){ $DataSourceID = TS-getDataSourceDetails -Name $DataSourceName -ProjectName $ProjectName}
   $DataSourceID
   $response = Invoke-RestMethod -Uri ${protocol}://$server/api/$api_ver/sites/$siteID/datasources/$DataSourceID/tags/$Tag -Headers $headers -Method Delete
  }
- catch {"Problem remove tag from DataSource:" + $DataSourceName}
+ catch {"Problem removing tag from DataSource:" + $DataSourceName}
 }
 
 
