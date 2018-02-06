@@ -2234,7 +2234,7 @@ function TS-QueryWorkbooksForSite
 
       ForEach ($tag in $detail.tags.tag.label){$taglist += $tag + " "}
 
-      $Workbooks = [pscustomobject]@{WorkbookName=$detail.name; ShowTabs=$detail.ShowTabs; ContentURL=$detail.contentURL; Size=$detail.size; CreatedAt=$detail.CreatedAt; UpdatedAt=$detail.UpdatedAt; Project=$ProjectName; Owner=$Owner; Tags=$taglist}
+      $Workbooks = [pscustomobject]@{WorkbookName=$detail.name; ShowTabs=$detail.ShowTabs; ContentURL=$detail.contentURL; Size=$detail.size; CreatedAt=$detail.CreatedAt; UpdatedAt=$detail.UpdatedAt; Project=$ProjectName; Owner=$Owner; Tags=$taglist;ID=$detail.ID}
       $workbooks
      }
    }
@@ -2451,11 +2451,12 @@ function TS-DeleteTagFromWorkbook
  param(
  [string[]] $WorkbookName = "",
  [string[]] $ProjectName = "",
- [string[]] $Tag = ""
+ [string[]] $Tag = "",
+ [string[]] $WorkbookID = ""
  )
  try
  {
-  $workbookID = TS-GetWorkbookDetails -Name $WorkbookName -ProjectName $ProjectName
+  if ($WorkbookID -eq ''){$workbookID = TS-GetWorkbookDetails -Name $WorkbookName -ProjectName $ProjectName}
   $workbookID
   $response = Invoke-RestMethod -Uri ${protocol}://$server/api/$api_ver/sites/$siteID/workbooks/$workbookID/tags/$Tag -Headers $headers -Method Delete
  }
