@@ -2,7 +2,7 @@
 #    
 #   Module: Tableau-REST.psm1
 #   Description: Tableau REST API through Powershell
-#   Version: 1.10.1
+#   Version: 1.10.2
 
 #   Author: Glen Robinson (glen.robinson@interworks.co.uk)
 #
@@ -2204,6 +2204,12 @@ function TS-QueryWorkbooksForUser
 
 function TS-QueryWorkbooksForSite
 {
+  param
+  (
+   [string[]] $Filter ="")
+
+    if ($Filter -ne '') {$Filter += "&filter="+ $Filter }
+
   try
  {
   $PageSize = 100
@@ -2212,7 +2218,8 @@ function TS-QueryWorkbooksForSite
   
   While ($done -eq 'FALSE')
    { 
-    $response = Invoke-RestMethod -Uri ${protocol}://$server/api/$api_ver/sites/$siteID/workbooks?pageSize=$PageSize`&pageNumber=$PageNumber -Headers $headers -Method Get
+    $response = Invoke-RestMethod -Uri ${protocol}://$server/api/$api_ver/sites/$siteID/workbooks?$filter`&pageSize=$PageSize`&pageNumber=$PageNumber -Headers $headers -Method Get 
+
     $totalAvailable = $response.tsResponse.pagination.totalAvailable
 
     If ($PageSize*$PageNumber -gt $totalAvailable) { $done = 'TRUE'}
