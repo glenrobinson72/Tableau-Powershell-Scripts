@@ -2,7 +2,7 @@
 #    
 #   Module: Tableau-REST.psm1
 #   Description: Tableau REST API through Powershell
-#   Version: 1.10.2
+#   Version: 1.10.3
 
 #   Author: Glen Robinson (glen.robinson@interworks.co.uk)
 #
@@ -688,13 +688,14 @@ function TS-QueryDataSource
 {
  param(
  [string[]] $DataSourceName = "",
- [string[]] $ProjectName = ""
+ [string[]] $ProjectName = "",
+ [string[]] $DataSourceID = ""
  )
  try
  {
-   $DS_ID = TS-GetDataSourceDetails -Name $DataSourceName -ProjectName $ProjectName
-   $DS_ID
-   $response = Invoke-RestMethod -Uri ${protocol}://$server/api/$api_ver/sites/$siteID/datasources/$DS_ID -Headers $headers -Method GET 
+    if ($DataSourceID -eq ''){ $DataSourceID = TS-getDataSourceDetails -Name $DataSourceName -ProjectName $ProjectName}
+   $DataSourceID
+   $response = Invoke-RestMethod -Uri ${protocol}://$server/api/$api_ver/sites/$siteID/datasources/$DataSourceID -Headers $headers -Method GET 
 
    ForEach ($detail in $response.tsresponse.datasource)
    {
@@ -711,13 +712,14 @@ function TS-QueryDataSourceConnections
 {
  param(
  [string[]] $DataSourceName = "",
- [string[]] $ProjectName = ""
+ [string[]] $ProjectName = "",
+ [string[]] $DataSourceID = ""
  )
  try
  {
-   $DS_ID = TS-GetDataSourceDetails -Name $DataSourceName -ProjectName $ProjectName
-   $DS_ID
-   $response = Invoke-RestMethod -Uri ${protocol}://$server/api/$api_ver/sites/$siteID/datasources/$DS_ID/connections -Headers $headers -Method GET 
+    if ($DataSourceID -eq ''){ $DataSourceID = TS-getDataSourceDetails -Name $DataSourceName -ProjectName $ProjectName}
+   $DataSourceID
+   $response = Invoke-RestMethod -Uri ${protocol}://$server/api/$api_ver/sites/$siteID/datasources/$DataSourceID/connections -Headers $headers -Method GET 
   $response.tsResponse.Connections.connection
  }
 catch { "Unable to Query Data Source Connections: " + $DataSourceName + " :- " + $_.Exception.Message}
@@ -879,12 +881,13 @@ function TS-DeleteDataSource
 {
  param(
  [string[]] $ProjectName = "",
- [string[]] $DataSourceName = ""
+ [string[]] $DataSourceName = "",
+ [string[]] $DataSourceID = ""
  )
  try
  {
-   $DS_ID = TS-GetDataSourceDetails -Name $DataSourceName -ProjectName $ProjectName
-   $response = Invoke-RestMethod -Uri ${protocol}://$server/api/$api_ver/sites/$siteID/datasources/$DS_ID -Headers $headers -Method DELETE 
+   if ($DataSourceID -eq ''){ $DataSourceID = TS-getDataSourceDetails -Name $DataSourceName -ProjectName $ProjectName}
+   $response = Invoke-RestMethod -Uri ${protocol}://$server/api/$api_ver/sites/$siteID/datasources/$DataSourceID -Headers $headers -Method DELETE 
    $response.tsresponse
  }
  catch { "Unable to Delete Data Source: " + $DataSourceName + " :- " + $_.Exception.Message}
@@ -897,12 +900,13 @@ function TS-UpdateDataSource
  [string[]] $DataSourceName = "",
  [string[]] $ProjectName = "",
  [string[]] $NewProjectName = "",
- [string[]] $NewOwnerAccount = ""
+ [string[]] $NewOwnerAccount = "",
+ [string[]] $DataSourceID = ""
  
  )
  try
  {
-   $DS_ID = TS-GetDataSourceDetails -Name $DataSourceName -ProjectName $ProjectName
+      if ($DataSourceID -eq ''){ $DataSourceID = TS-getDataSourceDetails -Name $DataSourceName -ProjectName $ProjectName}
    $userID = TS-GetUserDetails -name $NewOwnerAccount
    $ProjectID = TS-GetProjectDetails -ProjectName $NewProjectName
 
@@ -912,7 +916,7 @@ function TS-UpdateDataSource
 
    $body = ('<tsRequest><datasource>' + $body +  ' </datasource></tsRequest>')
 
-   $response = Invoke-RestMethod -Uri ${protocol}://$server/api/$api_ver/sites/$siteID/datasources/$DS_ID -Headers $headers -Method Put -Body $body
+   $response = Invoke-RestMethod -Uri ${protocol}://$server/api/$api_ver/sites/$siteID/datasources/$DataSourceID -Headers $headers -Method Put -Body $body
    $response.tsResponse.datasource
  }
  catch { "Unable to Update Data Source: " + $DataSourceName + " :- " + $_.Exception.Message}
@@ -927,12 +931,13 @@ function TS-UpdateDataSourceConnection
  [string[]] $Port = "",
  [string[]] $UserName = "",
  [string[]] $Password = "",
- [validateset('True', 'False')][string[]] $embed = ""
+ [validateset('True', 'False')][string[]] $embed = "",
+ [string[]] $DataSourceID = ""
  )
  try
  {
-   $DS_ID = TS-GetDataSourceDetails -Name $DataSourceName -ProjectName $ProjectName
-   $DS_ID
+   if ($DataSourceID -eq ''){ $DataSourceID = TS-getDataSourceDetails -Name $DataSourceName -ProjectName $ProjectName}
+   $DataSourceID
    $body = ""
    if ($ServerName -ne '') {$body += 'serverAddress ="'+ $ServerName +'" '}
    if ($Port -ne '') {$body += 'serverPort ="'+ $Port +'" '}
@@ -942,7 +947,7 @@ function TS-UpdateDataSourceConnection
    
    $body = ('<tsRequest><connection ' + $body +  '/></tsRequest>')
    $body
-   $response = Invoke-RestMethod -Uri ${protocol}://$server/api/$api_ver/sites/$siteID/datasources/$DS_ID/connection -Headers $headers -Method Put -Body $body
+   $response = Invoke-RestMethod -Uri ${protocol}://$server/api/$api_ver/sites/$siteID/datasources/$DataSourceID/connection -Headers $headers -Method Put -Body $body
    $response.tsResponse.connection
  }
  catch { "Unable to Update Data Source: " + $DataSourceName + " :- " + $_.Exception.Message}
@@ -1005,12 +1010,13 @@ function TS-QueryWorkbookPermissions
 {
 param(
   [string[]] $ProjectName = "",
-  [string[]] $WorkbookName = ""
+  [string[]] $WorkbookName = "",
+ [string[]] $WorkbookID = ""
   )
 
  try
   {
-   $workbookID= TS-GetWorkbookDetails -Name $workbookName -ProjectName $ProjectName
+     if ($WorkbookID -eq ''){$workbookID = TS-GetWorkbookDetails -Name $WorkbookName -ProjectName $ProjectName}
    $response = Invoke-RestMethod -Uri ${protocol}://$server/api/$api_ver/sites/$siteID/workbooks/$WorkbookID/permissions -Headers $headers -Method Get
  
      foreach ($detail in $response.tsResponse.permissions.granteeCapabilities)
@@ -1043,12 +1049,13 @@ function TS-QueryDataSourcePermissions
 {
 param(
   [string[]] $ProjectName = "",
-  [string[]] $DataSourceName = ""
+  [string[]] $DataSourceName = "",
+  [string[]] $DataSourceID = ""
   )
 
  try
   {
-   $DataSourceID = TS-GetDataSourceDetails -Name $DataSourceName -ProjectName $ProjectName
+     if ($DataSourceID -eq ''){ $DataSourceID = TS-getDataSourceDetails -Name $DataSourceName -ProjectName $ProjectName}
 
    $response = Invoke-RestMethod -Uri ${protocol}://$server/api/$api_ver/sites/$siteID/datasources/$DataSourceID/permissions -Headers $headers -Method Get
  
@@ -1091,7 +1098,8 @@ param(
   [validateset('Allow', 'Deny', 'Blank')][string[]] $SaveProject = "",
   [validateset('Allow', 'Deny', 'Blank')][string[]] $ProjectLeader = "",
 
-  #Workbook Permissions
+
+    #Workbook Permissions
   [validateset('Allow', 'Deny', 'Blank')][string[]] $ViewWorkbook = "",
   [validateset('Allow', 'Deny', 'Blank')][string[]] $DownloadImagePDF = "",
   [validateset('Allow', 'Deny', 'Blank')][string[]] $DownloadSummaryData = "",
@@ -1116,7 +1124,7 @@ param(
   [validateset('Allow', 'Deny', 'Blank')][string[]] $SetDataSourcePermissions = ""
  )
 
-try
+ try
  {
 
   $GroupID = ''
@@ -1385,7 +1393,8 @@ param(
   [validateset('Allow', 'Deny', 'Blank')][string[]] $MoveWorkbook = "",
   [validateset('Allow', 'Deny', 'Blank')][string[]] $DeleteWorkbook = "",
   [validateset('Allow', 'Deny', 'Blank')][string[]] $DownloadWorkbook = "",
-  [validateset('Allow', 'Deny', 'Blank')][string[]] $SetWorkbookPermissions = ""
+  [validateset('Allow', 'Deny', 'Blank')][string[]] $SetWorkbookPermissions = "",
+  [string[]] $WorkbookID = ""
 
  )
 
@@ -1395,7 +1404,7 @@ try
   $GroupID = ''
   $UserID = ''
 
-  $WorkbookID= TS-GetWorkbookDetails -Name $workbookName -projectname $ProjectName
+  if ($WorkbookID -eq ''){$workbookID = TS-GetWorkbookDetails -Name $WorkbookName -ProjectName $ProjectName}
   if ($GroupName -ne '')
    {
     $GroupID = TS-GetGroupDetails -name $GroupName -Domain $Domain
@@ -1516,7 +1525,8 @@ param(
   [validateset('Allow', 'Deny', 'Blank')][string[]] $SaveDataSource = "",
   [validateset('Allow', 'Deny', 'Blank')][string[]] $DownloadDataSource = "",
   [validateset('Allow', 'Deny', 'Blank')][string[]] $DeleteDataSource = "",
-  [validateset('Allow', 'Deny', 'Blank')][string[]] $SetDataSourcePermissions = ""
+  [validateset('Allow', 'Deny', 'Blank')][string[]] $SetDataSourcePermissions = "",
+  [string[]] $DataSourceID = ""
 
  )
 
@@ -1526,7 +1536,7 @@ try
   $GroupID = ''
   $UserID = ''
 
-  $DataSourceID= TS-GetDataSourceDetails -Name $DataSourcekName -projectname $ProjectName
+  if ($DataSourceID -eq ''){ $DataSourceID = TS-getDataSourceDetails -Name $DataSourceName -ProjectName $ProjectName}
   if ($GroupName -ne '')
    {
     $GroupID = TS-GetGroupDetails -name $GroupName -Domain $Domain
@@ -1962,6 +1972,7 @@ param(
 [string[]] $DataSourceName ="",
 [string[]] $ProjectName =""
 
+
 )
   if ($DataSourceName -ne '') {$DataSourceID = TS-GetDataSourceDetails -Name $DataSourceName -ProjectName $ProjectName}
   if ($WorkbookName -ne ''){$workbookID = TS-GetWorkbookDetails -Name $WorkBookName -ProjectName $ProjectName}
@@ -1985,12 +1996,13 @@ param
  [string[]] $WorkBookName ="",
  [string[]] $ProjectName ="",
  [string[]] $FileName ="",
- [validateset('True', 'False')][string[]] $IncludeExtract =""
+ [validateset('True', 'False')][string[]] $IncludeExtract ="",
+ [string[]] $WorkbookID = ""
 
  )
  try
   {
-   $workbookID = TS-GetWorkbookDetails -Name $WorkBookName -ProjectName $ProjectName
+     if ($WorkbookID -eq ''){$workbookID = TS-GetWorkbookDetails -Name $WorkbookName -ProjectName $ProjectName}
    $suffix = ""
    if ($IncludeExtract -ne ''){$suffix = '?includeExtract='+$IncludeExtract}
 
@@ -2013,12 +2025,13 @@ param
  [string[]] $ProjectName ="",
  [string[]] $FileName ="",
  [string[]] $RevisionNumber,
- [validateset('True', 'False')][string[]] $IncludeExtract =""
+ [validateset('True', 'False')][string[]] $IncludeExtract ="",
+ [string[]] $WorkbookID = ""
 
  )
  try
  {
-   $workbookID = TS-GetWorkbookDetails -Name $WorkBookName -ProjectName $ProjectName
+     if ($WorkbookID -eq ''){$workbookID = TS-GetWorkbookDetails -Name $WorkbookName -ProjectName $ProjectName}
    $suffix = ""
    if ($IncludeExtract -ne ''){$suffix = '?includeExtract='+$IncludeExtract}
 
@@ -2041,11 +2054,12 @@ param
  [string[]] $DatasourceName ="",
  [string[]] $ProjectName ="",
  [string[]] $FileName ="",
- [validateset('True', 'False')][string[]] $IncludeExtract =""
+ [validateset('True', 'False')][string[]] $IncludeExtract ="",
+ [string[]] $DataSourceID = ""
  )
  try
   {
-   $DataSourceID = TS-GetDataSourceDetails -Name $DataSourceName -ProjectName $ProjectName
+     if ($DataSourceID -eq ''){ $DataSourceID = TS-getDataSourceDetails -Name $DataSourceName -ProjectName $ProjectName}
    $suffix = ""
    if ($IncludeExtract -ne ''){$suffix = '?includeExtract='+$IncludeExtract}
    $url = $protocol.trim() + "://" + $server +"/api/" + $api_ver+ "/sites/" + $siteID + "/DataSources/" + $DataSourceID + "/content"+ $suffix
@@ -2066,11 +2080,12 @@ param
  [string[]] $ProjectName ="",
  [string[]] $FileName ="",
  [string[]] $RevisionNumber,
- [validateset('True', 'False')][string[]] $IncludeExtract =""
+ [validateset('True', 'False')][string[]] $IncludeExtract ="",
+ [string[]] $DataSourceID = ""
  )
  try
   {
-   $DataSourceID = TS-GetDataSourceDetails -Name $DataSourceName -ProjectName $ProjectName
+     if ($DataSourceID -eq ''){ $DataSourceID = TS-getDataSourceDetails -Name $DataSourceName -ProjectName $ProjectName}
    $suffix = ""
    if ($IncludeExtract -ne ''){$suffix = '?includeExtract='+$IncludeExtract}
    $url = $protocol.trim() + "://" + $server +"/api/" + $api_ver+ "/sites/" + $siteID + "/DataSources/" + $DataSourceID + "/revisions/" + $RevisionNumber + "/content"+ $suffix
@@ -2122,11 +2137,12 @@ function TS-QueryViewsForWorkbook
 {
    param(
    [string[]] $WorkbookName = "",
-   [string[]] $ProjectName = ""
+   [string[]] $ProjectName = "",
+ [string[]] $WorkbookID = ""
    )
  try
   {
-   $WorkbookID = TS-GetWorkbookDetails -Name $WorkbookName -ProjectName $ProjectName
+     if ($WorkbookID -eq ''){$workbookID = TS-GetWorkbookDetails -Name $WorkbookName -ProjectName $ProjectName}
    $response = Invoke-RestMethod -Uri ${protocol}://$server/api/$api_ver/sites/$siteID/workbooks/$WorkbookID/views?includeUsageStatistics=true -Headers $headers -Method Get
 
    ForEach ($detail in $response.tsResponse.Views.view)
@@ -2313,11 +2329,12 @@ function TS-QueryWorkbook
 {
  param(
  [string[]] $WorkbookName,
- [string[]] $ProjectName
+ [string[]] $ProjectName,
+ [string[]] $WorkbookID = ""
  )
  try
   {
-   $workbookID = TS-GetWorkbookDetails -Name $WorkBookName -ProjectName $ProjectName
+     if ($WorkbookID -eq ''){$workbookID = TS-GetWorkbookDetails -Name $WorkbookName -ProjectName $ProjectName}
    $response = Invoke-RestMethod -Uri ${protocol}://$server/api/$api_ver/sites/$siteID/workbooks/$workbookID -Headers $headers -Method Get
   
    ForEach ($detail in $response.tsResponse.workbook)
@@ -2339,12 +2356,13 @@ function TS-QueryWorkbookConnections
 {
 param(
 [string[]] $WorkbookName,
-[string[]] $ProjectName
+[string[]] $ProjectName,
+ [string[]] $WorkbookID = ""
 )
 
 try
  {
- $workbookID = TS-GetWorkbookDetails -Name $WorkBookName -ProjectName $ProjectName
+   if ($WorkbookID -eq ''){$workbookID = TS-GetWorkbookDetails -Name $WorkbookName -ProjectName $ProjectName}
  $WorkbookID
  $response = Invoke-RestMethod -Uri ${protocol}://$server/api/$api_ver/sites/$siteID/workbooks/$workbookID/connections -Headers $headers -Method Get
 
@@ -2365,11 +2383,13 @@ function TS-UpdateWorkbook
   [string[]] $ProjectName = "",
   [string[]] $NewProjectName = "",
   [string[]] $NewOwnerAccount = "",
-  [validateset('True', 'False')][string[]] $ShowTabs = ""
+  [validateset('True', 'False')][string[]] $ShowTabs = "",
+  [string[]] $WorkbookID = ""
+
  )
  try
  {
-  $workbookID = TS-GetWorkbookDetails -Name $WorkBookName -ProjectName $ProjectName
+  if ($WorkbookID -eq ''){$workbookID = TS-GetWorkbookDetails -Name $WorkbookName -ProjectName $ProjectName}
   $userID = TS-GetUserDetails -name $NewOwnerAccount
   $ProjectID = TS-GetProjectDetails -ProjectName $NewProjectName
 
@@ -2392,11 +2412,12 @@ function TS-DeleteWorkbook
 {
  param(
  [string[]] $WorkbookName = "",
- [string[]] $ProjectName = ""
+ [string[]] $ProjectName = "",
+ [string[]] $WorkbookID = ""
  )
  try
   {
-   $Workbook_ID = TS-GetWorkbookDetails -Name $WorkbookName -ProjectName $ProjectName
+     if ($WorkbookID -eq ''){$workbookID = TS-GetWorkbookDetails -Name $WorkbookName -ProjectName $ProjectName}
 
    $response = Invoke-RestMethod -Uri ${protocol}://$server/api/$api_ver/sites/$siteID/workbooks/$Workbook_ID -Headers $headers -Method DELETE 
    $response.tsresponse
@@ -2409,11 +2430,14 @@ function TS-AddTagsToWorkbook
  param(
  [string[]] $WorkbookName = "",
  [string[]] $ProjectName = "",
- [string[]] $Tags = ""
+ [string[]] $Tags = "",
+ [string[]] $WorkbookID = ""
+
  )
  try
  {
-  $workbookID = TS-GetWorkbookDetails -Name $WorkbookName -ProjectName $ProjectName
+
+  if ($WorkbookID -eq ''){$workbookID = TS-GetWorkbookDetails -Name $WorkbookName -ProjectName $ProjectName}
   $workbookID
 
   $body = ''
@@ -2433,11 +2457,12 @@ function TS-AddTagsToDataSource
  param(
  [string[]] $DataSourceName = "",
  [string[]] $ProjectName = "",
- [string[]] $Tags = ""
+ [string[]] $Tags = "",
+ [string[]] $DataSourceID = ""
  )
  try
  {
-  $DataSourceID = TS-getDataSourceDetails -Name $DataSourceName -ProjectName $ProjectName
+  if ($DataSourceID -eq ''){ $DataSourceID = TS-getDataSourceDetails -Name $DataSourceName -ProjectName $ProjectName}
   $DataSourceID
 
   $body = ''
@@ -2495,11 +2520,12 @@ function TS-GetViewDetails
  [string[]] $ViewName = "",
  [string[]] $WorkbookName = "",
  [string[]] $ID = "",
- [string[]] $ProjectName = ""
+ [string[]] $ProjectName = "",
+ [string[]] $WorkbookID = ""
  )
 
  $userID = TS-GetUserDetails -name $username
- $WorkbookID = TS-GetWorkbookDetails -Name $WorkbookName -ProjectName $ProjectName
+   if ($WorkbookID -eq ''){$workbookID = TS-GetWorkbookDetails -Name $WorkbookName -ProjectName $ProjectName}
  
  $response = Invoke-RestMethod -Uri ${protocol}://$server/api/$api_ver/sites/$siteID/workbooks/$workbookID/Views -Headers $headers -Method Get
 
@@ -2520,7 +2546,8 @@ function TS-AddWorkbookToFavorites
  [string[]] $WorkbookName = "",
  [string[]] $ProjectName = "",
  [string[]] $UserAccount = "",
- [string[]] $Label = ""
+ [string[]] $Label = "",
+ [string[]] $WorkbookID = ""
  )
  try
  {
@@ -2571,13 +2598,14 @@ function TS-DeleteWorkbookFromFavorites
  param(
  [string[]] $WorkbookName = "",
  [string[]] $ProjectName = "",
- [string[]] $UserAccount = ""
+ [string[]] $UserAccount = "",
+ [string[]] $WorkbookID = ""
  )
 
  try
   {
 
-   $workbookID = TS-GetWorkbookDetails -Name $WorkbookName -ProjectName $ProjectName
+     if ($WorkbookID -eq ''){$workbookID = TS-GetWorkbookDetails -Name $WorkbookName -ProjectName $ProjectName}
    $userID = TS-GetUserDetails -name $UserAccount
 
    $response = Invoke-RestMethod -Uri ${protocol}://$server/api/$api_ver/sites/$siteID/favorites/$userID/workbooks/$WorkbookID -Headers $headers -Method Delete
@@ -2611,11 +2639,12 @@ Function TS-QueryWorkbookPreviewImage
  param(
  [string[]] $WorkbookName = "",
  [string[]] $ProjectName = "",
- [string[]] $FileName = ""
+ [string[]] $FileName = "",
+ [string[]] $WorkbookID = ""
  )
  try
   {
-   $workbookID = TS-GetWorkbookDetails -Name $WorkbookName -ProjectName $ProjectName
+     if ($WorkbookID -eq ''){$workbookID = TS-GetWorkbookDetails -Name $WorkbookName -ProjectName $ProjectName}
 
    $url = $protocol.trim() + "://" + $server +"/api/" + $api_ver+ "/sites/" + $siteID + "/workbooks/" + $workbookID + "/previewImage"
    $wc = New-Object System.Net.WebClient
@@ -2633,11 +2662,12 @@ param(
  [string[]] $ViewName = "",
  [string[]] $WorkbookName = "",
  [string[]] $ProjectName = "",
- [string[]] $FileName = ""
+ [string[]] $FileName = "",
+ [string[]] $WorkbookID = ""
  )
  try
   {
-   $workbookID = TS-GetWorkbookDetails -Name $WorkbookName -ProjectName $ProjectName
+    if ($WorkbookID -eq ''){$workbookID = TS-GetWorkbookDetails -Name $WorkbookName -ProjectName $ProjectName}
    $viewID = TS-GetViewDetails -WorkbookName $WorkbookName -ProjectName $ProjectName -ViewName $ViewName
 
    $url = $protocol.trim() + "://" + $server +"/api/" + $api_ver+ "/sites/" + $siteID + "/workbooks/" + $workbookID + "/views/" + $viewID + "/previewImage"
@@ -2693,11 +2723,12 @@ function TS-GetDataSourceRevisions
 {
  param(
  [string[]] $DataSourceName = "",
- [string[]] $ProjectName = "" 
+ [string[]] $ProjectName = "",
+ [string[]] $DataSourceID = "" 
  )
  try
  {
-  $DataSourceID = TS-GetDataSourceDetails -Name $DataSourceName -ProjectName $ProjectName
+    if ($DataSourceID -eq ''){ $DataSourceID = TS-getDataSourceDetails -Name $DataSourceName -ProjectName $ProjectName}
   
   $PageSize = 100
   $PageNumber = 1
@@ -2728,11 +2759,12 @@ function TS-GetWorkbookRevisions
 {
  param(
  [string[]] $WorkbookName = "",
- [string[]] $ProjectName = "" 
+ [string[]] $ProjectName = "",
+ [string[]] $WorkbookID = "" 
  )
  try
  {
-  $WorkbookID = TS-GetWorkbookDetails -Name $WorkbookName -ProjectName $ProjectName
+    if ($WorkbookID -eq ''){$workbookID = TS-GetWorkbookDetails -Name $WorkbookName -ProjectName $ProjectName}
   
   $PageSize = 100
   $PageNumber = 1
@@ -2764,11 +2796,12 @@ function TS-RemoveWorkbookRevision
  param(
  [string[]] $WorkbookName = "",
  [string[]] $ProjectName = "",
- [string[]] $RevisionNumber =""
+ [string[]] $RevisionNumber ="",
+ [string[]] $WorkbookID = ""
  )
  try
  {
-  $WorkbookID = TS-GetWorkbookDetails -Name $WorkbookName -ProjectName $ProjectName
+    if ($WorkbookID -eq ''){$workbookID = TS-GetWorkbookDetails -Name $WorkbookName -ProjectName $ProjectName}
   $response = Invoke-RestMethod -Uri ${protocol}://$server/api/$api_ver/sites/$siteID/workbooks/$workbookID/revisions/$RevisionNumber -Headers $headers -Method Delete
   "Removed Workbook Revision: " + $RevisionNumber
   }
