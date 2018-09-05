@@ -11,6 +11,7 @@
 #
 #######################################################################################################
 
+
  param(
  [string[]] $server,
  [string[]] $username,
@@ -18,7 +19,6 @@
  )
 
 $remote_Backups_Folder = "\\RemoteServer\ShareName\"
-$remote_Backups_Folder = "C:\Archive\"
 
 $CopyFilesToRemote = $True
 $PurgeOldFiles = $True
@@ -36,7 +36,7 @@ $CrLf = "`r`n"
 $TSM_server         = "https://"+$server+":8850"
 $zipfile            = "logs_"+ $date.Year+$date.Month+$date.Day+".zip"
 $backups_file       = "tabsvc_"+ $date.Year+$date.Month+$date.Day
-$TSM_server
+$settings_file      = "ServerSettings.json"
 
 # Login to Server
 $EmailBody = "***** Login to TSM *****" +$CrLf
@@ -54,9 +54,19 @@ $backups_folder = &tsm configuration get -k basefilepath.backuprestore
 $logs_folder    = &tsm configuration get -k basefilepath.log_archive
 
 
+# Export Settings File
+$Emailbody += $crlf + "***** Export Settings File *****" + $CrLf
+$output = &tsm settings export -f $backups_folder'\'$settings_file
+$output = @($output -split '`n')
+
+foreach ($line in $output)
+ {
+   $emailbody += $line +$CrLf
+ }
+
 #Run Zip Logs
 $Emailbody += $crlf + "***** Zip Up old Log Files *****" + $CrLf
-$output = &tsm maintenance ziplogs -a -f $zipfile
+#$output = &tsm maintenance ziplogs -a -f $zipfile
 $output = @($output -split '`n')
 
 
@@ -67,7 +77,7 @@ foreach ($line in $output)
  
 # Run Clean Up
 $Emailbody += $crlf + "***** Clean Up old Log Files *****" + $CrLf
-$output = &tsm maintenance cleanup -l -t -q
+#$output = &tsm maintenance cleanup -l -t -q
 $output = @($output -split '`n')
 
 foreach ($line in $output)
@@ -78,7 +88,7 @@ foreach ($line in $output)
 
 # Run backups
 $Emailbody += $crlf + "***** Backup  Files *****" + $CrLf
-$output = &tsm maintenance backup -f $Backups_file
+#$output = &tsm maintenance backup -f $Backups_file
 $output = @($output -split '`n')
 
 foreach ($line in $output)
@@ -100,8 +110,9 @@ foreach ($line in $output)
 
 If ($CopyFilesToRemote -eq $True)
  {
-  copy-Item -path $logs_folder'\'$zipfile -destination $remote_Backups_Folder$zipfile
-  copy-Item -path $backups_folder'\'$backups_file".tsbak" -Destination $remote_Backups_Folder$backups_file".tsbak"
+  copy-Item -path $logs_folder"\"$zipfile -destination $remote_Backups_Folder$zipfile -Force
+  copy-Item -path $backups_folder"\"$settings_file -destination $remote_Backups_Folder$settings_file -Force
+  copy-Item -path $backups_folder"\"$backups_file".tsbak" -Destination $remote_Backups_Folder$backups_file".tsbak" -Force
  }
  
 
