@@ -11,18 +11,14 @@
 #
 #######################################################################################################
 
+ param(
+ [string[]] $server,
+ [string[]] $username,
+ [string[]] $password
+ )
 
-
-
-$server = "localhost"
-$username = "admin"
-$password = "Passw0rd"
-$filesfolder    = "C:\ProgramData\Tableau\Tableau Server\data\tabsvc\files"
-$backups_folder = $filesfolder+"\backups\"
-$logs_folder    = $filesfolder+"\log-archives\"
 $remote_Backups_Folder = "\\RemoteServer\ShareName\"
-$remote_Backups_Folder = "C:\Backups\"
-
+$remote_Backups_Folder = "C:\Archive\"
 
 $CopyFilesToRemote = $True
 $PurgeOldFiles = $True
@@ -33,7 +29,7 @@ $smtp_port = 25
 $smtp_from = "tableau@server.com"
 $smtp_to = "YourEmail@address.com"
 
-$DaysToKeep = 0
+$DaysToKeep = 5
 
 $date = Get-Date
 $CrLf = "`r`n"
@@ -52,6 +48,11 @@ foreach ($line in $output)
  {
    $emailbody += $line +$CrLf
  }
+
+# Get Folder Locations
+$backups_folder = &tsm configuration get -k basefilepath.backuprestore
+$logs_folder    = &tsm configuration get -k basefilepath.log_archive
+
 
 #Run Zip Logs
 $Emailbody += $crlf + "***** Zip Up old Log Files *****" + $CrLf
@@ -96,13 +97,11 @@ foreach ($line in $output)
    $emailbody += $line +$CrLf
  }
 
- $emailbody
 
- 
 If ($CopyFilesToRemote -eq $True)
  {
-  copy-Item -path $logs_folder$zipfile -destination $remote_Backups_Folder$zipfile
-  copy-Item -path $backups_folder$backups_file".tsbak" -Destination $remote_Backups_Folder$backups_file".tsbak"
+  copy-Item -path $logs_folder'\'$zipfile -destination $remote_Backups_Folder$zipfile
+  copy-Item -path $backups_folder'\'$backups_file".tsbak" -Destination $remote_Backups_Folder$backups_file".tsbak"
  }
  
 
@@ -148,7 +147,7 @@ $msg.To.Add($smtp_to)
 $msg.subject = $EmailSubject
 $msg.body = $EmailBody
 
-#$smtp.Send($msg)
+$smtp.Send($msg)
 $msg.dispose()
 
 
