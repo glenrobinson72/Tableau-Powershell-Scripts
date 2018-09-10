@@ -66,7 +66,7 @@ foreach ($line in $output)
 
 #Run Zip Logs
 $Emailbody += $crlf + "***** Zip Up old Log Files *****" + $CrLf
-#$output = &tsm maintenance ziplogs -a -f $zipfile
+$output = &tsm maintenance ziplogs -a -f $zipfile
 $output = @($output -split '`n')
 
 
@@ -77,7 +77,7 @@ foreach ($line in $output)
  
 # Run Clean Up
 $Emailbody += $crlf + "***** Clean Up old Log Files *****" + $CrLf
-#$output = &tsm maintenance cleanup -l -t -q
+$output = &tsm maintenance cleanup -l -t -q
 $output = @($output -split '`n')
 
 foreach ($line in $output)
@@ -88,7 +88,7 @@ foreach ($line in $output)
 
 # Run backups
 $Emailbody += $crlf + "***** Backup  Files *****" + $CrLf
-#$output = &tsm maintenance backup -f $Backups_file
+$output = &tsm maintenance backup -f $Backups_file
 $output = @($output -split '`n')
 
 foreach ($line in $output)
